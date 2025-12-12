@@ -1,1 +1,23 @@
 @import "tailwindcss";
+
+:root{
+  --brand-primary:#6366f1;
+  --brand-secondary:#3b82f6;
+  --brand-accent:#8b5cf6;
+}
+
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing:antailiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(135deg, var(--brand-accent) 0%, var(--brand-secondary) 100%);
+}
