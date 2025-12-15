@@ -51,20 +51,38 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ backgroundColor: "var(--bg-app)" }}>
       <Navbar />
       <HeroSection />
+
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <section
+        id="features"
+        className="py-20 px-4 sm:px-6 lg:px-8"
+        style={{ backgroundColor: "var(--bg-card)" }}
+      >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2
+              className="text-4xl md:text-5xl font-bold mb-4"
+              style={{ color: "var(--text-primary)" }}
+            >
               Everything You Need to{" "}
-              <span className="bg-linear-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <span
+                style={{
+                  background: "var(--gradient-text)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
                 Succeed
               </span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p
+              className="text-xl max-w-2xl mx-auto"
+              style={{ color: "var(--text-secondary)" }}
+            >
               Powerful tools and insights to help you make smarter investments
               decisions
             </p>
@@ -77,10 +95,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/*Footer*/}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
+      {/* Footer */}
+      <footer
+        className="py-12 px-4 sm:px-6 lg:px-8 border-t"
+        style={{
+          backgroundColor: "var(--bg-app)",
+          borderColor: "var(--border-subtle)",
+        }}
+      >
         <div className="max-w-7xl mx-auto text-center">
-          <p className="text-gray-400">
+          <p style={{ color: "var(--text-secondary)" }}>
             © 2025 PortfoLens. All rights reserved.
           </p>
         </div>
