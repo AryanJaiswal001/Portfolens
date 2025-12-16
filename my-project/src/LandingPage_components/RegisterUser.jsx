@@ -53,6 +53,9 @@ export default function SignUpPage() {
 
     console.log("Sign up attempt", formData);
     setError("");
+
+    //Add registeration API here
+    navigate("/onboarding")
   };
 
   return (
