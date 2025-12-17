@@ -1,31 +1,45 @@
+import { useState } from "react";
 import PrivateLayout from "./PrivateLayout";
+import EmptyState from "../components/EmptyState";
 import { Briefcase } from "lucide-react";
 
 export default function PortfolioPage() {
+  const [hasHoldings, setHasHoldings] = useState(false);
+
   return (
     <PrivateLayout pageTitle="Portfolio">
-      <div
-        className="rounded-2xl border p-12 text-center"
-        style={{
-          backgroundColor: "var(--bg-card)",
-          borderColor: "var(--border-subtle)",
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
-        <Briefcase
-          className="w-16 h-16 mx-auto mb-6"
-          style={{ color: "var(--accent-purple)" }}
-        ></Briefcase>
-        <h2
-          className="text-2xl font-bold mb-3"
-          style={{ color: "var(--text-primary)" }}
+      {!hasHoldings ? (
+        <EmptyState
+          icon={Briefcase}
+          title="No Portfolio found"
+          description="Portfolios added from dashboard will appear here"
+          actionLabel="Go to Dashboard"
+          navigateTo="/dashboard"
+        />
+      ) : (
+        <div
+          className="rounded-2xl border p-12 text-center"
+          style={{
+            backgroundColor: "var(--bg-card)",
+            borderColor: "var(--border-subtle)",
+            boxShadow: "var(--shadow-card)",
+          }}
         >
-          Portfolio Management
-        </h2>
-        <p style={{ color: "var(--text-secondary)" }}>
-          Your holdings, assets and allocation details will appear here.
-        </p>
-      </div>
+          <Briefcase
+            className="w-16 h-16 mx-auto mb-6"
+            style={{ color: "var(--accent-purple)" }}
+          />
+          <h2
+            className="text-2xl font-bold mb-3"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Portfolio Management
+          </h2>
+          <p style={{ color: "var(--text-secondary)" }}>
+            Your holdings, assets and allocation details will appear here.
+          </p>
+        </div>
+      )}
     </PrivateLayout>
   );
 }

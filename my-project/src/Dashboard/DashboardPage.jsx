@@ -1,59 +1,69 @@
-import Logo from "../components/Logo";
-import ThemeToggle from "../components/ThemeToggle";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PrivateLayout from "./PrivateLayout";
+import EmptyState from "../components/EmptyState";
+import { PlusCircle } from "lucide-react";
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+
+  // Simulated state - will be replaced with real data later
+  const [hasPortfolio, setHasPortfolio] = useState(false);
+
+  const handleAddPortfolio = () => {
+    console.log("Add Portfolio clicked");
+    // TODO: Navigate to portfolio creation flow
+    // navigate("/portfolio/add");
+
+    // For now, simulate adding a portfolio (temporary)
+    setHasPortfolio(true);
+  };
+
   return (
     <PrivateLayout pageTitle="Dashboard">
-      
-      <div
-        className="rounded-2xl border p-12 text-center"
-        style={{
-          backgroundColor: "var(--bg-card)",
-          borderColor: "var(--border-subtle)",
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
-        <div className="max-w-md mx-auto">
-          <div
-            className="w-16 h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center"
-            style={{
-              background: "var(--gradient-bg)",
-              border: "2px solid var(--border-subtle)",
-            }}
-          >
-            <svg
-              className="w-8 h-8"
-              style={{ color: "var(--accent-purple)" }}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-          </div>
-
+      {!hasPortfolio ? (
+        // Empty State
+        <EmptyState
+          icon={PlusCircle}
+          title="No portfolio added yet"
+          description="Start by adding your investments to see insights, allocation, and risk analysis."
+          actionLabel="Add Portfolio"
+          onAction={handleAddPortfolio}
+        />
+      ) : (
+        // Portfolio Content (placeholder for now)
+        <div
+          className="rounded-2xl border p-12"
+          style={{
+            backgroundColor: "var(--bg-card)",
+            borderColor: "var(--border-subtle)",
+            boxShadow: "var(--shadow-card)",
+          }}
+        >
           <h2
-            className="text-2xl font-bold mb-3"
+            className="text-2xl font-bold mb-4"
             style={{ color: "var(--text-primary)" }}
           >
-            Dashboard Content
+            Portfolio Overview
           </h2>
-          <p
-            className="text-base leading-relaxed"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            Your portfolio analytics, AI-powered insights, and performance
-            metrics will appear here. Charts, graphs, and data visualizations
-            are coming soon.
+          <p style={{ color: "var(--text-secondary)" }}>
+            Your portfolio analytics, charts, and insights will appear here.
           </p>
+
+          {/* Temporary button to reset state */}
+          <button
+            onClick={() => setHasPortfolio(false)}
+            className="mt-4 px-4 py-2 rounded-lg text-sm"
+            style={{
+              backgroundColor: "var(--bg-button-secondary)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-medium)",
+            }}
+          >
+            Reset to Empty State (Dev Only)
+          </button>
         </div>
-      </div>
+      )}
     </PrivateLayout>
   );
 }
