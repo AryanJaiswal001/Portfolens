@@ -11,6 +11,11 @@ import InsightsPage from "./Dashboard/InsightsPage";
 import ReportsPage from "./Dashboard/ReportsPage";
 import SettingsPage from "./Dashboard/Settings";
 
+// Import Dashboard Inner Components
+import SelectMethod from "./Dashboard/Dashboard_inner_components/SelectMethod";
+import ManualEntryPage from "./Dashboard/Dashboard_inner_components/ManualEntry";
+import UploadPage from "./Dashboard/Dashboard_inner_components/UploadPage";
+
 import "./App.css";
 
 function App() {
@@ -24,12 +29,23 @@ function App() {
         <Route path="/onboarding" element={<ChoiceScreen />} />
         <Route path="/survey" element={<Survey />} />
 
-        {/* Private Routes */}
+        {/* Private Routes - Main Dashboard */}
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+
+        {/* Dashboard Inner Routes - Add Investment Flow */}
+        <Route path="/dashboard/add-investment" element={<SelectMethod />} />
+        <Route
+          path="/dashboard/add-investment/manual"
+          element={<ManualEntryPage />}
+        />
+        <Route
+          path="/dashboard/add-investment/upload"
+          element={<UploadPage />}
+        />
       </Routes>
     </Router>
   );

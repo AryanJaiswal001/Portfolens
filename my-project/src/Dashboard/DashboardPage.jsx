@@ -12,11 +12,7 @@ export default function DashboardPage() {
 
   const handleAddPortfolio = () => {
     console.log("Add Portfolio clicked");
-    // TODO: Navigate to portfolio creation flow
-    // navigate("/portfolio/add");
-
-    // For now, simulate adding a portfolio (temporary)
-    setHasPortfolio(true);
+    navigate("/dashboard/add-investment")
   };
 
   return (
@@ -49,6 +45,19 @@ export default function DashboardPage() {
           <p style={{ color: "var(--text-secondary)" }}>
             Your portfolio analytics, charts, and insights will appear here.
           </p>
+
+          {/**Add investment button*/}
+          {/* Add Investment Button */}
+          <button
+            onClick={handleAddPortfolio}
+            className="mt-6 px-6 py-3 rounded-xl font-medium transition-opacity hover:opacity-90"
+            style={{
+              backgroundColor: "var(--accent-purple)",
+              color: "white",
+            }}
+          >
+            Add More Investments
+          </button>
 
           {/* Temporary button to reset state */}
           <button
