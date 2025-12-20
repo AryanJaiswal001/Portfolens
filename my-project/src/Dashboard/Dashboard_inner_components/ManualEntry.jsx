@@ -1,38 +1,106 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PrivateLayout from "../PrivateLayout";
-import { X, Plus, Info } from "lucide-react";
+import { X, Plus, Info, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function ManualEntryPage() {
   const navigate = useNavigate();
   const [currentSection, setCurrentSection] = useState(1);
-  const [showOptional, setShowOptional] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [formData, setFormData] = useState({
+    // Asset Details
     assetType: "",
     assetName: "",
-    investmentType: "",
-    amountInvested: "",
-    startMonth: "",
-    startYear: "",
+    investmentStartYear: "",
+
+    // Investment Method Selection (multi-select)
+    hasSIP: false,
+    hasLumpsum: false,
+
+    // SIP Details
+    sipAmount: "",
+    sipStartMonth: "",
+    sipStartYear: "",
+    sipEndMonth: "",
+    sipEndYear: "",
+    sipOngoing: true,
+    stepUpPercentage: "",
+
+    // Optional
     notes: "",
   });
+
+  // Lumpsum investments as array (supports multiple one-time investments)
+  const [lumpsums, setLumpsums] = useState([
+    { amount: "", month: "", year: "" },
+  ]);
 
   const updateField = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const toggleInvestmentMethod = (method) => {
+    if (method === "sip") {
+      updateField("hasSIP", !formData.hasSIP);
+    } else {
+      updateField("hasLumpsum", !formData.hasLumpsum);
+    }
+  };
+
+  // Lumpsum array management
+  const addLumpsum = () => {
+    setLumpsums([...lumpsums, { amount: "", month: "", year: "" }]);
+  };
+
+  const removeLumpsum = (index) => {
+    if (lumpsums.length > 1) {
+      setLumpsums(lumpsums.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateLumpsum = (index, field, value) => {
+    const updated = lumpsums.map((lumpsum, i) =>
+      i === index ? { ...lumpsum, [field]: value } : lumpsum
+    );
+    setLumpsums(updated);
+  };
+
   const canProceed = () => {
     if (currentSection === 1) {
-      return formData.assetType && formData.assetName.trim();
+      return (
+        formData.assetType &&
+        formData.assetName.trim() &&
+        formData.investmentStartYear
+      );
     }
     if (currentSection === 2) {
-      return (
-        formData.investmentType &&
-        formData.amountInvested &&
-        formData.startMonth &&
-        formData.startYear
-      );
+      // At least one method must be selected
+      if (!formData.hasSIP && !formData.hasLumpsum) return false;
+
+      // Validate SIP if selected
+      if (formData.hasSIP) {
+        if (
+          !formData.sipAmount ||
+          !formData.sipStartMonth ||
+          !formData.sipStartYear
+        ) {
+          return false;
+        }
+      }
+
+      // Validate Lumpsum entries if selected
+      if (formData.hasLumpsum) {
+        // Check that all lumpsum entries have required fields
+        const allLumpsumsValid = lumpsums.every(
+          (lumpsum) => lumpsum.amount && lumpsum.month && lumpsum.year
+        );
+        if (!allLumpsumsValid) {
+          return false;
+        }
+      }
+
+      return true;
     }
     return true;
   };
@@ -47,8 +115,11 @@ export default function ManualEntryPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Investment added:", formData);
-    // Future: Save to backend/state
+    const submissionData = {
+      ...formData,
+      lumpsums: formData.hasLumpsum ? lumpsums : [],
+    };
+    console.log("Investment added:", submissionData);
     navigate("/portfolio", {
       state: { message: "Investment added successfully!" },
     });
@@ -57,6 +128,26 @@ export default function ManualEntryPage() {
   const handleCancel = () => {
     navigate("/dashboard/add-investment");
   };
+
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const years = Array.from(
+    { length: 30 },
+    (_, i) => new Date().getFullYear() - i
+  );
 
   return (
     <PrivateLayout pageTitle="Manual Entry">
@@ -72,7 +163,7 @@ export default function ManualEntryPage() {
           }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6">
             <div>
               <h2
                 className="text-2xl font-bold mb-2"
@@ -81,8 +172,7 @@ export default function ManualEntryPage() {
                 Add Investment
               </h2>
               <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                Don't worry if you don't know everything — you can always update
-                later.
+                Approximate dates are fine — you can always update later.
               </p>
             </div>
             <button
@@ -98,25 +188,56 @@ export default function ManualEntryPage() {
           </div>
 
           {/* Progress Indicator */}
-          <div className="flex items-center gap-2 mb-8">
-            {[1, 2].map((step) => (
-              <div
-                key={step}
-                className="flex-1 h-1.5 rounded-full transition-all"
-                style={{
-                  backgroundColor:
-                    currentSection >= step
-                      ? "var(--accent-purple)"
-                      : "var(--border-subtle)",
-                }}
-              />
+          <div className="flex items-center gap-3 mb-8">
+            {[
+              { step: 1, label: "Asset Details" },
+              { step: 2, label: "Investment Details" },
+            ].map(({ step, label }) => (
+              <div key={step} className="flex items-center gap-2 flex-1">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all"
+                  style={{
+                    backgroundColor:
+                      currentSection >= step
+                        ? "var(--accent-purple)"
+                        : "var(--bg-subtle)",
+                    color:
+                      currentSection >= step ? "white" : "var(--text-tertiary)",
+                  }}
+                >
+                  {step}
+                </div>
+                <span
+                  className="text-sm font-medium hidden sm:block"
+                  style={{
+                    color:
+                      currentSection >= step
+                        ? "var(--text-primary)"
+                        : "var(--text-tertiary)",
+                  }}
+                >
+                  {label}
+                </span>
+                {step < 2 && (
+                  <div
+                    className="flex-1 h-0.5 rounded-full"
+                    style={{
+                      backgroundColor:
+                        currentSection > step
+                          ? "var(--accent-purple)"
+                          : "var(--border-subtle)",
+                    }}
+                  />
+                )}
+              </div>
             ))}
           </div>
 
           <form onSubmit={handleSubmit}>
-            {/* Section 1: Asset Basics */}
+            {/* ========== SECTION 1: Asset Details ========== */}
             {currentSection === 1 && (
               <div className="space-y-6">
+                {/* Asset Type */}
                 <div>
                   <label
                     className="block text-sm font-medium mb-2"
@@ -128,7 +249,7 @@ export default function ManualEntryPage() {
                   <select
                     value={formData.assetType}
                     onChange={(e) => updateField("assetType", e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border outline-none transition-all focus:ring-2"
+                    className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
                     style={{
                       backgroundColor: "var(--bg-input)",
                       borderColor: "var(--border-subtle)",
@@ -144,20 +265,21 @@ export default function ManualEntryPage() {
                   </select>
                 </div>
 
+                {/* Asset Name */}
                 <div>
                   <label
                     className="block text-sm font-medium mb-2"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    Asset Name{" "}
+                    Fund / Asset Name{" "}
                     <span style={{ color: "var(--accent-red)" }}>*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.assetName}
                     onChange={(e) => updateField("assetName", e.target.value)}
-                    placeholder="e.g. SBI Bluechip Fund"
-                    className="w-full px-4 py-3 rounded-xl border outline-none transition-all focus:ring-2"
+                    placeholder="e.g. SBI Bluechip Fund, Reliance Industries"
+                    className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
                     style={{
                       backgroundColor: "var(--bg-input)",
                       borderColor: "var(--border-subtle)",
@@ -170,213 +292,645 @@ export default function ManualEntryPage() {
                     style={{ color: "var(--text-tertiary)" }}
                   >
                     <Info className="w-4 h-4" />
-                    Enter the exact name as it appears in your statements
+                    Enter the name as it appears in your statements
+                  </p>
+                </div>
+
+                {/* Investment Start Year */}
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    When did you start investing?{" "}
+                    <span style={{ color: "var(--accent-red)" }}>*</span>
+                  </label>
+                  <select
+                    value={formData.investmentStartYear}
+                    onChange={(e) =>
+                      updateField("investmentStartYear", e.target.value)
+                    }
+                    className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
+                    style={{
+                      backgroundColor: "var(--bg-input)",
+                      borderColor: "var(--border-subtle)",
+                      color: "var(--text-primary)",
+                    }}
+                    required
+                  >
+                    <option value="">Select year</option>
+                    {years.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                  <p
+                    className="mt-2 text-sm"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    Approximate year is fine
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Section 2: Investment Details */}
+            {/* ========== SECTION 2: Investment Details ========== */}
             {currentSection === 2 && (
               <div className="space-y-6">
+                {/* Investment Method Selection */}
                 <div>
                   <label
                     className="block text-sm font-medium mb-3"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    Investment Type{" "}
+                    How do you invest in this asset?{" "}
                     <span style={{ color: "var(--accent-red)" }}>*</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {["SIP", "Lumpsum"].map((type) => (
-                      <label
-                        key={type}
-                        className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all"
-                        style={{
-                          backgroundColor:
-                            formData.investmentType === type.toLowerCase()
-                              ? "var(--bg-subtle)"
-                              : "var(--bg-input)",
-                          borderColor:
-                            formData.investmentType === type.toLowerCase()
-                              ? "var(--accent-purple)"
-                              : "var(--border-subtle)",
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="investmentType"
-                          value={type.toLowerCase()}
-                          checked={
-                            formData.investmentType === type.toLowerCase()
-                          }
-                          onChange={(e) =>
-                            updateField("investmentType", e.target.value)
-                          }
-                          className="w-4 h-4"
-                          style={{ accentColor: "var(--accent-purple)" }}
-                        />
-                        <span
-                          className="font-medium"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          {type}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    Amount Invested{" "}
-                    <span style={{ color: "var(--accent-red)" }}>*</span>
-                  </label>
-                  <div className="relative">
-                    <span
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
-                      ₹
-                    </span>
-                    <input
-                      type="number"
-                      value={formData.amountInvested}
-                      onChange={(e) =>
-                        updateField("amountInvested", e.target.value)
-                      }
-                      placeholder="10000"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border outline-none transition-all focus:ring-2"
-                      style={{
-                        backgroundColor: "var(--bg-input)",
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-primary)",
-                      }}
-                      min="1"
-                      required
-                    />
-                  </div>
                   <p
-                    className="mt-2 text-sm"
+                    className="text-sm mb-4"
                     style={{ color: "var(--text-tertiary)" }}
                   >
-                    Total amount invested so far
+                    Select all that apply — many investors do both SIP and
+                    Lumpsum
                   </p>
-                </div>
 
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    Investment Start Date{" "}
-                    <span style={{ color: "var(--accent-red)" }}>*</span>
-                  </label>
                   <div className="grid grid-cols-2 gap-3">
-                    <select
-                      value={formData.startMonth}
-                      onChange={(e) =>
-                        updateField("startMonth", e.target.value)
-                      }
-                      className="px-4 py-3 rounded-xl border outline-none transition-all focus:ring-2"
+                    {/* SIP Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => toggleInvestmentMethod("sip")}
+                      className="flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left"
                       style={{
-                        backgroundColor: "var(--bg-input)",
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-primary)",
+                        backgroundColor: formData.hasSIP
+                          ? "var(--bg-subtle)"
+                          : "var(--bg-input)",
+                        borderColor: formData.hasSIP
+                          ? "var(--accent-purple)"
+                          : "var(--border-subtle)",
                       }}
-                      required
                     >
-                      <option value="">Month</option>
-                      {[
-                        "January",
-                        "February",
-                        "March",
-                        "April",
-                        "May",
-                        "June",
-                        "July",
-                        "August",
-                        "September",
-                        "October",
-                        "November",
-                        "December",
-                      ].map((month, idx) => (
-                        <option key={month} value={idx + 1}>
-                          {month}
-                        </option>
-                      ))}
-                    </select>
+                      <div
+                        className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
+                        style={{
+                          borderColor: formData.hasSIP
+                            ? "var(--accent-purple)"
+                            : "var(--border-medium)",
+                          backgroundColor: formData.hasSIP
+                            ? "var(--accent-purple)"
+                            : "transparent",
+                        }}
+                      >
+                        {formData.hasSIP && (
+                          <svg
+                            className="w-3 h-3 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <span
+                          className="font-semibold block"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          SIP
+                        </span>
+                        <span
+                          className="text-xs"
+                          style={{ color: "var(--text-tertiary)" }}
+                        >
+                          Monthly investment
+                        </span>
+                      </div>
+                    </button>
 
-                    <select
-                      value={formData.startYear}
-                      onChange={(e) => updateField("startYear", e.target.value)}
-                      className="px-4 py-3 rounded-xl border outline-none transition-all focus:ring-2"
+                    {/* Lumpsum Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => toggleInvestmentMethod("lumpsum")}
+                      className="flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left"
                       style={{
-                        backgroundColor: "var(--bg-input)",
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-primary)",
+                        backgroundColor: formData.hasLumpsum
+                          ? "var(--bg-subtle)"
+                          : "var(--bg-input)",
+                        borderColor: formData.hasLumpsum
+                          ? "var(--accent-purple)"
+                          : "var(--border-subtle)",
                       }}
-                      required
                     >
-                      <option value="">Year</option>
-                      {Array.from(
-                        { length: 30 },
-                        (_, i) => new Date().getFullYear() - i
-                      ).map((year) => (
-                        <option key={year} value={year}>
-                          {year}
-                        </option>
-                      ))}
-                    </select>
+                      <div
+                        className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
+                        style={{
+                          borderColor: formData.hasLumpsum
+                            ? "var(--accent-purple)"
+                            : "var(--border-medium)",
+                          backgroundColor: formData.hasLumpsum
+                            ? "var(--accent-purple)"
+                            : "transparent",
+                        }}
+                      >
+                        {formData.hasLumpsum && (
+                          <svg
+                            className="w-3 h-3 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <span
+                          className="font-semibold block"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          Lumpsum
+                        </span>
+                        <span
+                          className="text-xs"
+                          style={{ color: "var(--text-tertiary)" }}
+                        >
+                          One-time investment
+                        </span>
+                      </div>
+                    </button>
                   </div>
                 </div>
 
-                {/* Optional Section Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setShowOptional(!showOptional)}
-                  className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-80"
-                  style={{ color: "var(--accent-purple)" }}
-                >
-                  <Plus className="w-4 h-4" />
-                  {showOptional ? "Hide" : "Add"} optional details
-                </button>
-
-                {/* Optional Fields */}
-                {showOptional && (
+                {/* ===== SIP SECTION (Conditional) ===== */}
+                {formData.hasSIP && (
                   <div
-                    className="pt-4 border-t"
-                    style={{ borderColor: "var(--border-subtle)" }}
+                    className="p-5 rounded-xl border"
+                    style={{
+                      backgroundColor: "var(--bg-subtle)",
+                      borderColor: "var(--border-subtle)",
+                    }}
                   >
-                    <label
-                      className="block text-sm font-medium mb-2"
+                    <h4
+                      className="font-semibold mb-4 flex items-center gap-2"
                       style={{ color: "var(--text-primary)" }}
                     >
-                      Notes{" "}
                       <span
-                        className="text-sm font-normal"
-                        style={{ color: "var(--text-tertiary)" }}
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: "var(--accent-purple)" }}
+                      />
+                      SIP Details
+                    </h4>
+
+                    <div className="space-y-4">
+                      {/* Monthly SIP Amount */}
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          Monthly SIP Amount{" "}
+                          <span style={{ color: "var(--accent-red)" }}>*</span>
+                        </label>
+                        <div className="relative">
+                          <span
+                            className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium"
+                            style={{ color: "var(--text-secondary)" }}
+                          >
+                            ₹
+                          </span>
+                          <input
+                            type="number"
+                            value={formData.sipAmount}
+                            onChange={(e) =>
+                              updateField("sipAmount", e.target.value)
+                            }
+                            placeholder="5000"
+                            className="w-full pl-10 pr-4 py-3 rounded-xl border outline-none transition-all"
+                            style={{
+                              backgroundColor: "var(--bg-input)",
+                              borderColor: "var(--border-subtle)",
+                              color: "var(--text-primary)",
+                            }}
+                            min="1"
+                          />
+                        </div>
+                      </div>
+
+                      {/* SIP Start Date */}
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-2"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          SIP Start Date{" "}
+                          <span style={{ color: "var(--accent-red)" }}>*</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <select
+                            value={formData.sipStartMonth}
+                            onChange={(e) =>
+                              updateField("sipStartMonth", e.target.value)
+                            }
+                            className="px-4 py-3 rounded-xl border outline-none transition-all"
+                            style={{
+                              backgroundColor: "var(--bg-input)",
+                              borderColor: "var(--border-subtle)",
+                              color: "var(--text-primary)",
+                            }}
+                          >
+                            <option value="">Month</option>
+                            {months.map((month, idx) => (
+                              <option key={month} value={idx + 1}>
+                                {month}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={formData.sipStartYear}
+                            onChange={(e) =>
+                              updateField("sipStartYear", e.target.value)
+                            }
+                            className="px-4 py-3 rounded-xl border outline-none transition-all"
+                            style={{
+                              backgroundColor: "var(--bg-input)",
+                              borderColor: "var(--border-subtle)",
+                              color: "var(--text-primary)",
+                            }}
+                          >
+                            <option value="">Year</option>
+                            {years.map((year) => (
+                              <option key={year} value={year}>
+                                {year}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* SIP Status Toggle */}
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          SIP is ongoing
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateField("sipOngoing", !formData.sipOngoing)
+                          }
+                          className="relative w-12 h-6 rounded-full transition-all"
+                          style={{
+                            backgroundColor: formData.sipOngoing
+                              ? "var(--accent-purple)"
+                              : "var(--border-medium)",
+                          }}
+                        >
+                          <span
+                            className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all"
+                            style={{
+                              left: formData.sipOngoing
+                                ? "calc(100% - 20px)"
+                                : "4px",
+                            }}
+                          />
+                        </button>
+                      </div>
+
+                      {/* SIP End Date (conditional) */}
+                      {!formData.sipOngoing && (
+                        <div>
+                          <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            SIP End Date
+                          </label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <select
+                              value={formData.sipEndMonth}
+                              onChange={(e) =>
+                                updateField("sipEndMonth", e.target.value)
+                              }
+                              className="px-4 py-3 rounded-xl border outline-none transition-all"
+                              style={{
+                                backgroundColor: "var(--bg-input)",
+                                borderColor: "var(--border-subtle)",
+                                color: "var(--text-primary)",
+                              }}
+                            >
+                              <option value="">Month</option>
+                              {months.map((month, idx) => (
+                                <option key={month} value={idx + 1}>
+                                  {month}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              value={formData.sipEndYear}
+                              onChange={(e) =>
+                                updateField("sipEndYear", e.target.value)
+                              }
+                              className="px-4 py-3 rounded-xl border outline-none transition-all"
+                              style={{
+                                backgroundColor: "var(--bg-input)",
+                                borderColor: "var(--border-subtle)",
+                                color: "var(--text-primary)",
+                              }}
+                            >
+                              <option value="">Year</option>
+                              {years.map((year) => (
+                                <option key={year} value={year}>
+                                  {year}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Advanced: Step-up */}
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-80"
+                        style={{ color: "var(--accent-purple)" }}
                       >
-                        (Optional)
-                      </span>
-                    </label>
-                    <textarea
-                      value={formData.notes}
-                      onChange={(e) => updateField("notes", e.target.value)}
-                      placeholder="Any additional info you want to remember"
-                      rows="3"
-                      className="w-full px-4 py-3 rounded-xl border outline-none transition-all focus:ring-2 resize-none"
-                      style={{
-                        backgroundColor: "var(--bg-input)",
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-primary)",
-                      }}
-                    />
+                        {showAdvanced ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                        {showAdvanced ? "Hide" : "Show"} advanced options
+                      </button>
+
+                      {showAdvanced && (
+                        <div>
+                          <label
+                            className="block text-sm font-medium mb-2"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            Annual Step-up{" "}
+                            <span
+                              className="font-normal"
+                              style={{ color: "var(--text-tertiary)" }}
+                            >
+                              (Optional)
+                            </span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={formData.stepUpPercentage}
+                              onChange={(e) =>
+                                updateField("stepUpPercentage", e.target.value)
+                              }
+                              placeholder="10"
+                              className="w-full px-4 py-3 pr-10 rounded-xl border outline-none transition-all"
+                              style={{
+                                backgroundColor: "var(--bg-input)",
+                                borderColor: "var(--border-subtle)",
+                                color: "var(--text-primary)",
+                              }}
+                              min="0"
+                              max="100"
+                            />
+                            <span
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-medium"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              %
+                            </span>
+                          </div>
+                          <p
+                            className="mt-2 text-sm"
+                            style={{ color: "var(--text-tertiary)" }}
+                          >
+                            Yearly increase in SIP amount
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
+
+                {/* ===== LUMPSUM SECTION (Conditional) ===== */}
+                {formData.hasLumpsum && (
+                  <div
+                    className="p-5 rounded-xl border"
+                    style={{
+                      backgroundColor: "var(--bg-subtle)",
+                      borderColor: "var(--border-subtle)",
+                    }}
+                  >
+                    <div className="mb-4">
+                      <h4
+                        className="font-semibold flex items-center gap-2"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: "var(--accent-green)" }}
+                        />
+                        Lumpsum Investments
+                      </h4>
+                      <p
+                        className="text-sm mt-1"
+                        style={{ color: "var(--text-tertiary)" }}
+                      >
+                        Add one or more one-time investments for this asset
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {lumpsums.map((lumpsum, index) => (
+                        <div
+                          key={index}
+                          className="p-4 rounded-xl border"
+                          style={{
+                            backgroundColor: "var(--bg-card)",
+                            borderColor: "var(--border-medium)",
+                          }}
+                        >
+                          {/* Header with entry number and remove button */}
+                          <div className="flex items-center justify-between mb-3">
+                            <span
+                              className="text-sm font-medium"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              Lumpsum #{index + 1}
+                            </span>
+                            {lumpsums.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeLumpsum(index)}
+                                className="p-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                                style={{ backgroundColor: "var(--bg-subtle)" }}
+                                title="Remove this entry"
+                              >
+                                <X
+                                  className="w-4 h-4"
+                                  style={{ color: "var(--text-tertiary)" }}
+                                />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Lumpsum Amount */}
+                          <div className="mb-3">
+                            <label
+                              className="block text-sm font-medium mb-2"
+                              style={{ color: "var(--text-primary)" }}
+                            >
+                              Amount{" "}
+                              <span style={{ color: "var(--accent-red)" }}>
+                                *
+                              </span>
+                            </label>
+                            <div className="relative">
+                              <span
+                                className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium"
+                                style={{ color: "var(--text-secondary)" }}
+                              >
+                                ₹
+                              </span>
+                              <input
+                                type="number"
+                                value={lumpsum.amount}
+                                onChange={(e) =>
+                                  updateLumpsum(index, "amount", e.target.value)
+                                }
+                                placeholder="100000"
+                                className="w-full pl-10 pr-4 py-3 rounded-xl border outline-none transition-all"
+                                style={{
+                                  backgroundColor: "var(--bg-input)",
+                                  borderColor: "var(--border-subtle)",
+                                  color: "var(--text-primary)",
+                                }}
+                                min="1"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Lumpsum Date */}
+                          <div>
+                            <label
+                              className="block text-sm font-medium mb-2"
+                              style={{ color: "var(--text-primary)" }}
+                            >
+                              Investment Date{" "}
+                              <span style={{ color: "var(--accent-red)" }}>
+                                *
+                              </span>
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <select
+                                value={lumpsum.month}
+                                onChange={(e) =>
+                                  updateLumpsum(index, "month", e.target.value)
+                                }
+                                className="px-4 py-3 rounded-xl border outline-none transition-all"
+                                style={{
+                                  backgroundColor: "var(--bg-input)",
+                                  borderColor: "var(--border-subtle)",
+                                  color: "var(--text-primary)",
+                                }}
+                              >
+                                <option value="">Month</option>
+                                {months.map((month, idx) => (
+                                  <option key={month} value={idx + 1}>
+                                    {month}
+                                  </option>
+                                ))}
+                              </select>
+                              <select
+                                value={lumpsum.year}
+                                onChange={(e) =>
+                                  updateLumpsum(index, "year", e.target.value)
+                                }
+                                className="px-4 py-3 rounded-xl border outline-none transition-all"
+                                style={{
+                                  backgroundColor: "var(--bg-input)",
+                                  borderColor: "var(--border-subtle)",
+                                  color: "var(--text-primary)",
+                                }}
+                              >
+                                <option value="">Year</option>
+                                {years.map((year) => (
+                                  <option key={year} value={year}>
+                                    {year}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Add Another Lumpsum Button */}
+                      <button
+                        type="button"
+                        onClick={addLumpsum}
+                        className="w-full py-3 px-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all hover:opacity-80"
+                        style={{
+                          borderColor: "var(--border-medium)",
+                          color: "var(--accent-purple)",
+                        }}
+                      >
+                        <Plus className="w-5 h-5" />
+                        <span className="font-medium">Add another lumpsum</span>
+                      </button>
+
+                      <p
+                        className="text-sm text-center"
+                        style={{ color: "var(--text-tertiary)" }}
+                      >
+                        Many investors make multiple lumpsum investments over
+                        time
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional Notes */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateField("showNotes", !formData.showNotes)
+                    }
+                    className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-80"
+                    style={{ color: "var(--accent-purple)" }}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add notes (optional)
+                  </button>
+
+                  {formData.showNotes && (
+                    <div className="mt-4">
+                      <textarea
+                        value={formData.notes}
+                        onChange={(e) => updateField("notes", e.target.value)}
+                        placeholder="Any additional info you want to remember about this investment"
+                        rows="3"
+                        className="w-full px-4 py-3 rounded-xl border outline-none transition-all resize-none"
+                        style={{
+                          backgroundColor: "var(--bg-input)",
+                          borderColor: "var(--border-subtle)",
+                          color: "var(--text-primary)",
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
