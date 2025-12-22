@@ -10,6 +10,7 @@ import PortfolioPage from "./Dashboard/PortfolioPage";
 import InsightsPage from "./Dashboard/InsightsPage";
 import ReportsPage from "./Dashboard/ReportsPage";
 import SettingsPage from "./Dashboard/Settings";
+import SurveyQuestions from "./Dashboard/Dashboard_inner_components/SurveyQuestions";
 
 // Import Dashboard Inner Components
 import SelectMethod from "./Dashboard/Dashboard_inner_components/SelectMethod";
@@ -27,7 +28,7 @@ function App() {
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/signup" element={<RegisterUser />} />
         <Route path="/onboarding" element={<ChoiceScreen />} />
-        <Route path="/survey" element={<Survey />} />
+        <Route path="/survey" element={<SurveyQuestions />} />
 
         {/* Private Routes - Main Dashboard */}
         <Route path="/dashboard" element={<DashboardPage />} />
@@ -46,6 +47,7 @@ function App() {
           path="/dashboard/add-investment/upload"
           element={<UploadPage />}
         />
+        <Route path="/dashboard/survey" element={<SurveyQuestions />} />
       </Routes>
     </Router>
   );

@@ -1,110 +1,191 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PrivateLayout from "../PrivateLayout";
-import { X, Plus, Info, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  X,
+  Plus,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  Briefcase,
+  TrendingUp,
+} from "lucide-react";
 
 export default function ManualEntryPage() {
   const navigate = useNavigate();
   const [currentSection, setCurrentSection] = useState(1);
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const [formData, setFormData] = useState({
-    // Asset Details
-    assetType: "",
-    assetName: "",
-    investmentStartYear: "",
+  // ═══════════════════════════════════════════════════════════════
+  // PORTFOLIO-LEVEL STATE
+  // ═══════════════════════════════════════════════════════════════
+  const [portfolioName, setPortfolioName] = useState("");
 
-    // Investment Method Selection (multi-select)
-    hasSIP: false,
-    hasLumpsum: false,
-
-    // SIP Details
-    sipAmount: "",
-    sipStartMonth: "",
-    sipStartYear: "",
-    sipEndMonth: "",
-    sipEndYear: "",
-    sipOngoing: true,
-    stepUpPercentage: "",
-
-    // Optional
-    notes: "",
-  });
-
-  // Lumpsum investments as array (supports multiple one-time investments)
-  const [lumpsums, setLumpsums] = useState([
-    { amount: "", month: "", year: "" },
+  // ═══════════════════════════════════════════════════════════════
+  // FUNDS ARRAY - Each fund has its own SIP + Lumpsums
+  // ═══════════════════════════════════════════════════════════════
+  const [funds, setFunds] = useState([
+    {
+      id: Date.now(),
+      assetType: "",
+      assetName: "",
+      investmentStartYear: "",
+      hasSIP: false,
+      hasLumpsum: false,
+      // SIP Details
+      sipAmount: "",
+      sipStartMonth: "",
+      sipStartYear: "",
+      sipEndMonth: "",
+      sipEndYear: "",
+      sipOngoing: true,
+      stepUpPercentage: "",
+      showAdvanced: false,
+      // Lumpsum Entries (array)
+      lumpsums: [{ amount: "", month: "", year: "" }],
+      // UI State
+      isCollapsed: false,
+    },
   ]);
 
-  const updateField = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  // ═══════════════════════════════════════════════════════════════
+  // FUND MANAGEMENT FUNCTIONS
+  // ═══════════════════════════════════════════════════════════════
+  const addFund = () => {
+    setFunds([
+      ...funds,
+      {
+        id: Date.now(),
+        assetType: "",
+        assetName: "",
+        investmentStartYear: "",
+        hasSIP: false,
+        hasLumpsum: false,
+        sipAmount: "",
+        sipStartMonth: "",
+        sipStartYear: "",
+        sipEndMonth: "",
+        sipEndYear: "",
+        sipOngoing: true,
+        stepUpPercentage: "",
+        showAdvanced: false,
+        lumpsums: [{ amount: "", month: "", year: "" }],
+        isCollapsed: false,
+      },
+    ]);
   };
 
-  const toggleInvestmentMethod = (method) => {
-    if (method === "sip") {
-      updateField("hasSIP", !formData.hasSIP);
-    } else {
-      updateField("hasLumpsum", !formData.hasLumpsum);
+  const removeFund = (fundId) => {
+    if (funds.length > 1) {
+      setFunds(funds.filter((fund) => fund.id !== fundId));
     }
   };
 
-  // Lumpsum array management
-  const addLumpsum = () => {
-    setLumpsums([...lumpsums, { amount: "", month: "", year: "" }]);
-  };
-
-  const removeLumpsum = (index) => {
-    if (lumpsums.length > 1) {
-      setLumpsums(lumpsums.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateLumpsum = (index, field, value) => {
-    const updated = lumpsums.map((lumpsum, i) =>
-      i === index ? { ...lumpsum, [field]: value } : lumpsum
+  const updateFund = (fundId, field, value) => {
+    setFunds(
+      funds.map((fund) =>
+        fund.id === fundId ? { ...fund, [field]: value } : fund
+      )
     );
-    setLumpsums(updated);
   };
 
+  const toggleFundCollapse = (fundId) => {
+    setFunds(
+      funds.map((fund) =>
+        fund.id === fundId ? { ...fund, isCollapsed: !fund.isCollapsed } : fund
+      )
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // LUMPSUM MANAGEMENT (PER FUND)
+  // ═══════════════════════════════════════════════════════════════
+  const addLumpsum = (fundId) => {
+    setFunds(
+      funds.map((fund) =>
+        fund.id === fundId
+          ? {
+              ...fund,
+              lumpsums: [...fund.lumpsums, { amount: "", month: "", year: "" }],
+            }
+          : fund
+      )
+    );
+  };
+
+  const removeLumpsum = (fundId, lumpsumIndex) => {
+    setFunds(
+      funds.map((fund) => {
+        if (fund.id === fundId && fund.lumpsums.length > 1) {
+          return {
+            ...fund,
+            lumpsums: fund.lumpsums.filter((_, i) => i !== lumpsumIndex),
+          };
+        }
+        return fund;
+      })
+    );
+  };
+
+  const updateLumpsum = (fundId, lumpsumIndex, field, value) => {
+    setFunds(
+      funds.map((fund) => {
+        if (fund.id === fundId) {
+          const updatedLumpsums = fund.lumpsums.map((lumpsum, i) =>
+            i === lumpsumIndex ? { ...lumpsum, [field]: value } : lumpsum
+          );
+          return { ...fund, lumpsums: updatedLumpsums };
+        }
+        return fund;
+      })
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // VALIDATION
+  // ═══════════════════════════════════════════════════════════════
   const canProceed = () => {
     if (currentSection === 1) {
-      return (
-        formData.assetType &&
-        formData.assetName.trim() &&
-        formData.investmentStartYear
+      // Portfolio name required
+      if (!portfolioName.trim()) return false;
+
+      // At least one fund with basic details
+      return funds.every(
+        (fund) =>
+          fund.assetType && fund.assetName.trim() && fund.investmentStartYear
       );
     }
+
     if (currentSection === 2) {
-      // At least one method must be selected
-      if (!formData.hasSIP && !formData.hasLumpsum) return false;
+      return funds.every((fund) => {
+        // At least one investment method per fund
+        if (!fund.hasSIP && !fund.hasLumpsum) return false;
 
-      // Validate SIP if selected
-      if (formData.hasSIP) {
-        if (
-          !formData.sipAmount ||
-          !formData.sipStartMonth ||
-          !formData.sipStartYear
-        ) {
-          return false;
+        // Validate SIP if enabled
+        if (fund.hasSIP) {
+          if (!fund.sipAmount || !fund.sipStartMonth || !fund.sipStartYear) {
+            return false;
+          }
         }
-      }
 
-      // Validate Lumpsum entries if selected
-      if (formData.hasLumpsum) {
-        // Check that all lumpsum entries have required fields
-        const allLumpsumsValid = lumpsums.every(
-          (lumpsum) => lumpsum.amount && lumpsum.month && lumpsum.year
-        );
-        if (!allLumpsumsValid) {
-          return false;
+        // Validate all lumpsums if enabled
+        if (fund.hasLumpsum) {
+          const allLumpsumsValid = fund.lumpsums.every(
+            (lumpsum) => lumpsum.amount && lumpsum.month && lumpsum.year
+          );
+          if (!allLumpsumsValid) return false;
         }
-      }
 
-      return true;
+        return true;
+      });
     }
+
     return true;
   };
 
+  // ═══════════════════════════════════════════════════════════════
+  // NAVIGATION & SUBMISSION
+  // ═══════════════════════════════════════════════════════════════
   const handleNext = () => {
     if (currentSection < 2) setCurrentSection(currentSection + 1);
   };
@@ -115,13 +196,46 @@ export default function ManualEntryPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const submissionData = {
-      ...formData,
-      lumpsums: formData.hasLumpsum ? lumpsums : [],
+
+    // Build portfolio data structure
+    const portfolioData = {
+      portfolioName: portfolioName.trim(),
+      createdAt: new Date().toISOString(),
+      funds: funds.map((fund) => ({
+        assetType: fund.assetType,
+        assetName: fund.assetName,
+        investmentStartYear: fund.investmentStartYear,
+        sipDetails: fund.hasSIP
+          ? {
+              amount: parseFloat(fund.sipAmount),
+              startMonth: parseInt(fund.sipStartMonth),
+              startYear: parseInt(fund.sipStartYear),
+              endMonth: fund.sipOngoing ? null : parseInt(fund.sipEndMonth),
+              endYear: fund.sipOngoing ? null : parseInt(fund.sipEndYear),
+              isOngoing: fund.sipOngoing,
+              stepUpPercentage: fund.stepUpPercentage
+                ? parseFloat(fund.stepUpPercentage)
+                : null,
+            }
+          : null,
+        lumpsums: fund.hasLumpsum
+          ? fund.lumpsums.map((l) => ({
+              amount: parseFloat(l.amount),
+              month: parseInt(l.month),
+              year: parseInt(l.year),
+            }))
+          : [],
+      })),
     };
-    console.log("Investment added:", submissionData);
+
+    console.log("Portfolio created:", portfolioData);
+
+    // Navigate to portfolio with success state
     navigate("/portfolio", {
-      state: { message: "Investment added successfully!" },
+      state: {
+        message: "Portfolio added successfully! 🎉",
+        portfolio: portfolioData,
+      },
     });
   };
 
@@ -129,6 +243,9 @@ export default function ManualEntryPage() {
     navigate("/dashboard/add-investment");
   };
 
+  // ═══════════════════════════════════════════════════════════════
+  // CONSTANTS
+  // ═══════════════════════════════════════════════════════════════
   const months = [
     "January",
     "February",
@@ -149,30 +266,39 @@ export default function ManualEntryPage() {
     (_, i) => new Date().getFullYear() - i
   );
 
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════
   return (
-    <PrivateLayout pageTitle="Manual Entry">
+    <PrivateLayout pageTitle="Create Portfolio">
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
       >
         <div
-          className="w-full max-w-2xl rounded-2xl p-8 relative max-h-[90vh] overflow-y-auto"
+          className="w-full max-w-3xl rounded-2xl p-8 relative max-h-[90vh] overflow-y-auto"
           style={{
             backgroundColor: "var(--bg-card)",
             boxShadow: "var(--shadow-elevated)",
           }}
         >
-          {/* Header */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* HEADER */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2
-                className="text-2xl font-bold mb-2"
+                className="text-2xl font-bold mb-2 flex items-center gap-3"
                 style={{ color: "var(--text-primary)" }}
               >
-                Add Investment
+                <Briefcase
+                  className="w-7 h-7"
+                  style={{ color: "var(--accent-purple)" }}
+                />
+                Create Portfolio
               </h2>
               <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                Approximate dates are fine — you can always update later.
+                Build your investment portfolio with multiple funds
               </p>
             </div>
             <button
@@ -187,10 +313,12 @@ export default function ManualEntryPage() {
             </button>
           </div>
 
-          {/* Progress Indicator */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* PROGRESS INDICATOR */}
+          {/* ═══════════════════════════════════════════════════════════════ */}
           <div className="flex items-center gap-3 mb-8">
             {[
-              { step: 1, label: "Asset Details" },
+              { step: 1, label: "Portfolio & Funds" },
               { step: 2, label: "Investment Details" },
             ].map(({ step, label }) => (
               <div key={step} className="flex items-center gap-2 flex-1">
@@ -234,52 +362,33 @@ export default function ManualEntryPage() {
           </div>
 
           <form onSubmit={handleSubmit}>
-            {/* ========== SECTION 1: Asset Details ========== */}
+            {/* ═══════════════════════════════════════════════════════════════ */}
+            {/* SECTION 1: Portfolio & Fund Details */}
+            {/* ═══════════════════════════════════════════════════════════════ */}
             {currentSection === 1 && (
               <div className="space-y-6">
-                {/* Asset Type */}
-                <div>
+                {/* Portfolio Name */}
+                <div
+                  className="p-5 rounded-xl border"
+                  style={{
+                    backgroundColor: "var(--bg-subtle)",
+                    borderColor: "var(--accent-purple)",
+                    borderWidth: "2px",
+                  }}
+                >
                   <label
-                    className="block text-sm font-medium mb-2"
+                    className="block text-sm font-semibold mb-2"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    Asset Type{" "}
-                    <span style={{ color: "var(--accent-red)" }}>*</span>
-                  </label>
-                  <select
-                    value={formData.assetType}
-                    onChange={(e) => updateField("assetType", e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
-                    style={{
-                      backgroundColor: "var(--bg-input)",
-                      borderColor: "var(--border-subtle)",
-                      color: "var(--text-primary)",
-                    }}
-                    required
-                  >
-                    <option value="">Select asset type</option>
-                    <option value="mutual-fund">Mutual Fund</option>
-                    <option value="stock">Stock</option>
-                    <option value="etf">ETF</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                {/* Asset Name */}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    Fund / Asset Name{" "}
+                    Portfolio Name{" "}
                     <span style={{ color: "var(--accent-red)" }}>*</span>
                   </label>
                   <input
                     type="text"
-                    value={formData.assetName}
-                    onChange={(e) => updateField("assetName", e.target.value)}
-                    placeholder="e.g. SBI Bluechip Fund, Reliance Industries"
-                    className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
+                    value={portfolioName}
+                    onChange={(e) => setPortfolioName(e.target.value)}
+                    placeholder='e.g. "Long Term Wealth", "Retirement Fund", "Kids Education"'
+                    className="w-full px-4 py-3 rounded-xl border outline-none transition-all text-lg"
                     style={{
                       backgroundColor: "var(--bg-input)",
                       borderColor: "var(--border-subtle)",
@@ -292,361 +401,166 @@ export default function ManualEntryPage() {
                     style={{ color: "var(--text-tertiary)" }}
                   >
                     <Info className="w-4 h-4" />
-                    Enter the name as it appears in your statements
+                    Give your portfolio a meaningful name for easy tracking
                   </p>
                 </div>
 
-                {/* Investment Start Year */}
+                {/* Funds List */}
                 <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    When did you start investing?{" "}
-                    <span style={{ color: "var(--accent-red)" }}>*</span>
-                  </label>
-                  <select
-                    value={formData.investmentStartYear}
-                    onChange={(e) =>
-                      updateField("investmentStartYear", e.target.value)
-                    }
-                    className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
-                    style={{
-                      backgroundColor: "var(--bg-input)",
-                      borderColor: "var(--border-subtle)",
-                      color: "var(--text-primary)",
-                    }}
-                    required
-                  >
-                    <option value="">Select year</option>
-                    {years.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                  <p
-                    className="mt-2 text-sm"
-                    style={{ color: "var(--text-tertiary)" }}
-                  >
-                    Approximate year is fine
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* ========== SECTION 2: Investment Details ========== */}
-            {currentSection === 2 && (
-              <div className="space-y-6">
-                {/* Investment Method Selection */}
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-3"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    How do you invest in this asset?{" "}
-                    <span style={{ color: "var(--accent-red)" }}>*</span>
-                  </label>
-                  <p
-                    className="text-sm mb-4"
-                    style={{ color: "var(--text-tertiary)" }}
-                  >
-                    Select all that apply — many investors do both SIP and
-                    Lumpsum
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* SIP Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => toggleInvestmentMethod("sip")}
-                      className="flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left"
-                      style={{
-                        backgroundColor: formData.hasSIP
-                          ? "var(--bg-subtle)"
-                          : "var(--bg-input)",
-                        borderColor: formData.hasSIP
-                          ? "var(--accent-purple)"
-                          : "var(--border-subtle)",
-                      }}
-                    >
-                      <div
-                        className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
-                        style={{
-                          borderColor: formData.hasSIP
-                            ? "var(--accent-purple)"
-                            : "var(--border-medium)",
-                          backgroundColor: formData.hasSIP
-                            ? "var(--accent-purple)"
-                            : "transparent",
-                        }}
-                      >
-                        {formData.hasSIP && (
-                          <svg
-                            className="w-3 h-3 text-white"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                      <div>
-                        <span
-                          className="font-semibold block"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          SIP
-                        </span>
-                        <span
-                          className="text-xs"
-                          style={{ color: "var(--text-tertiary)" }}
-                        >
-                          Monthly investment
-                        </span>
-                      </div>
-                    </button>
-
-                    {/* Lumpsum Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => toggleInvestmentMethod("lumpsum")}
-                      className="flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left"
-                      style={{
-                        backgroundColor: formData.hasLumpsum
-                          ? "var(--bg-subtle)"
-                          : "var(--bg-input)",
-                        borderColor: formData.hasLumpsum
-                          ? "var(--accent-purple)"
-                          : "var(--border-subtle)",
-                      }}
-                    >
-                      <div
-                        className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
-                        style={{
-                          borderColor: formData.hasLumpsum
-                            ? "var(--accent-purple)"
-                            : "var(--border-medium)",
-                          backgroundColor: formData.hasLumpsum
-                            ? "var(--accent-purple)"
-                            : "transparent",
-                        }}
-                      >
-                        {formData.hasLumpsum && (
-                          <svg
-                            className="w-3 h-3 text-white"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                      <div>
-                        <span
-                          className="font-semibold block"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          Lumpsum
-                        </span>
-                        <span
-                          className="text-xs"
-                          style={{ color: "var(--text-tertiary)" }}
-                        >
-                          One-time investment
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* ===== SIP SECTION (Conditional) ===== */}
-                {formData.hasSIP && (
-                  <div
-                    className="p-5 rounded-xl border"
-                    style={{
-                      backgroundColor: "var(--bg-subtle)",
-                      borderColor: "var(--border-subtle)",
-                    }}
-                  >
-                    <h4
-                      className="font-semibold mb-4 flex items-center gap-2"
+                  <div className="flex items-center justify-between mb-4">
+                    <h3
+                      className="text-lg font-semibold"
                       style={{ color: "var(--text-primary)" }}
                     >
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: "var(--accent-purple)" }}
-                      />
-                      SIP Details
-                    </h4>
+                      Funds in this Portfolio
+                    </h3>
+                    <span
+                      className="text-sm px-3 py-1 rounded-full"
+                      style={{
+                        backgroundColor: "var(--bg-subtle)",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      {funds.length} {funds.length === 1 ? "fund" : "funds"}
+                    </span>
+                  </div>
 
-                    <div className="space-y-4">
-                      {/* Monthly SIP Amount */}
-                      <div>
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          Monthly SIP Amount{" "}
-                          <span style={{ color: "var(--accent-red)" }}>*</span>
-                        </label>
-                        <div className="relative">
-                          <span
-                            className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium"
-                            style={{ color: "var(--text-secondary)" }}
-                          >
-                            ₹
-                          </span>
-                          <input
-                            type="number"
-                            value={formData.sipAmount}
-                            onChange={(e) =>
-                              updateField("sipAmount", e.target.value)
-                            }
-                            placeholder="5000"
-                            className="w-full pl-10 pr-4 py-3 rounded-xl border outline-none transition-all"
-                            style={{
-                              backgroundColor: "var(--bg-input)",
-                              borderColor: "var(--border-subtle)",
-                              color: "var(--text-primary)",
-                            }}
-                            min="1"
-                          />
+                  <div className="space-y-4">
+                    {funds.map((fund, index) => (
+                      <div
+                        key={fund.id}
+                        className="p-5 rounded-xl border"
+                        style={{
+                          backgroundColor: "var(--bg-card)",
+                          borderColor: "var(--border-medium)",
+                        }}
+                      >
+                        {/* Fund Header */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
+                              style={{
+                                backgroundColor: "var(--accent-purple)",
+                                color: "white",
+                              }}
+                            >
+                              {index + 1}
+                            </div>
+                            <span
+                              className="font-medium"
+                              style={{ color: "var(--text-primary)" }}
+                            >
+                              {fund.assetName || `Fund ${index + 1}`}
+                            </span>
+                          </div>
+                          {funds.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeFund(fund.id)}
+                              className="p-2 rounded-lg hover:opacity-80 transition-opacity"
+                              style={{ backgroundColor: "var(--bg-subtle)" }}
+                              title="Remove fund"
+                            >
+                              <Trash2
+                                className="w-4 h-4"
+                                style={{ color: "var(--accent-red)" }}
+                              />
+                            </button>
+                          )}
                         </div>
-                      </div>
 
-                      {/* SIP Start Date */}
-                      <div>
-                        <label
-                          className="block text-sm font-medium mb-2"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          SIP Start Date{" "}
-                          <span style={{ color: "var(--accent-red)" }}>*</span>
-                        </label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <select
-                            value={formData.sipStartMonth}
-                            onChange={(e) =>
-                              updateField("sipStartMonth", e.target.value)
-                            }
-                            className="px-4 py-3 rounded-xl border outline-none transition-all"
-                            style={{
-                              backgroundColor: "var(--bg-input)",
-                              borderColor: "var(--border-subtle)",
-                              color: "var(--text-primary)",
-                            }}
-                          >
-                            <option value="">Month</option>
-                            {months.map((month, idx) => (
-                              <option key={month} value={idx + 1}>
-                                {month}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            value={formData.sipStartYear}
-                            onChange={(e) =>
-                              updateField("sipStartYear", e.target.value)
-                            }
-                            className="px-4 py-3 rounded-xl border outline-none transition-all"
-                            style={{
-                              backgroundColor: "var(--bg-input)",
-                              borderColor: "var(--border-subtle)",
-                              color: "var(--text-primary)",
-                            }}
-                          >
-                            <option value="">Year</option>
-                            {years.map((year) => (
-                              <option key={year} value={year}>
-                                {year}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* SIP Status Toggle */}
-                      <div className="flex items-center justify-between">
-                        <span
-                          className="text-sm font-medium"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          SIP is ongoing
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateField("sipOngoing", !formData.sipOngoing)
-                          }
-                          className="relative w-12 h-6 rounded-full transition-all"
-                          style={{
-                            backgroundColor: formData.sipOngoing
-                              ? "var(--accent-purple)"
-                              : "var(--border-medium)",
-                          }}
-                        >
-                          <span
-                            className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all"
-                            style={{
-                              left: formData.sipOngoing
-                                ? "calc(100% - 20px)"
-                                : "4px",
-                            }}
-                          />
-                        </button>
-                      </div>
-
-                      {/* SIP End Date (conditional) */}
-                      {!formData.sipOngoing && (
-                        <div>
-                          <label
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "var(--text-primary)" }}
-                          >
-                            SIP End Date
-                          </label>
-                          <div className="grid grid-cols-2 gap-3">
+                        {/* Fund Fields */}
+                        <div className="space-y-4">
+                          {/* Asset Type */}
+                          <div>
+                            <label
+                              className="block text-sm font-medium mb-2"
+                              style={{ color: "var(--text-primary)" }}
+                            >
+                              Asset Type{" "}
+                              <span style={{ color: "var(--accent-red)" }}>
+                                *
+                              </span>
+                            </label>
                             <select
-                              value={formData.sipEndMonth}
+                              value={fund.assetType}
                               onChange={(e) =>
-                                updateField("sipEndMonth", e.target.value)
+                                updateFund(fund.id, "assetType", e.target.value)
                               }
-                              className="px-4 py-3 rounded-xl border outline-none transition-all"
+                              className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
                               style={{
                                 backgroundColor: "var(--bg-input)",
                                 borderColor: "var(--border-subtle)",
                                 color: "var(--text-primary)",
                               }}
+                              required
                             >
-                              <option value="">Month</option>
-                              {months.map((month, idx) => (
-                                <option key={month} value={idx + 1}>
-                                  {month}
-                                </option>
-                              ))}
+                              <option value="">Select asset type</option>
+                              <option value="mutual-fund">Mutual Fund</option>
+                              <option value="stock">Stock</option>
+                              <option value="etf">ETF</option>
+                              <option value="other">Other</option>
                             </select>
-                            <select
-                              value={formData.sipEndYear}
+                          </div>
+
+                          {/* Asset Name */}
+                          <div>
+                            <label
+                              className="block text-sm font-medium mb-2"
+                              style={{ color: "var(--text-primary)" }}
+                            >
+                              Fund / Asset Name{" "}
+                              <span style={{ color: "var(--accent-red)" }}>
+                                *
+                              </span>
+                            </label>
+                            <input
+                              type="text"
+                              value={fund.assetName}
                               onChange={(e) =>
-                                updateField("sipEndYear", e.target.value)
+                                updateFund(fund.id, "assetName", e.target.value)
                               }
-                              className="px-4 py-3 rounded-xl border outline-none transition-all"
+                              placeholder="e.g. SBI Bluechip Fund, HDFC Top 100"
+                              className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
                               style={{
                                 backgroundColor: "var(--bg-input)",
                                 borderColor: "var(--border-subtle)",
                                 color: "var(--text-primary)",
                               }}
+                              required
+                            />
+                          </div>
+
+                          {/* Investment Start Year */}
+                          <div>
+                            <label
+                              className="block text-sm font-medium mb-2"
+                              style={{ color: "var(--text-primary)" }}
                             >
-                              <option value="">Year</option>
+                              When did you start investing?{" "}
+                              <span style={{ color: "var(--accent-red)" }}>
+                                *
+                              </span>
+                            </label>
+                            <select
+                              value={fund.investmentStartYear}
+                              onChange={(e) =>
+                                updateFund(
+                                  fund.id,
+                                  "investmentStartYear",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
+                              style={{
+                                backgroundColor: "var(--bg-input)",
+                                borderColor: "var(--border-subtle)",
+                                color: "var(--text-primary)",
+                              }}
+                              required
+                            >
+                              <option value="">Select year</option>
                               {years.map((year) => (
                                 <option key={year} value={year}>
                                   {year}
@@ -655,286 +569,774 @@ export default function ManualEntryPage() {
                             </select>
                           </div>
                         </div>
-                      )}
+                      </div>
+                    ))}
 
-                      {/* Advanced: Step-up */}
-                      <button
-                        type="button"
-                        onClick={() => setShowAdvanced(!showAdvanced)}
-                        className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-80"
-                        style={{ color: "var(--accent-purple)" }}
-                      >
-                        {showAdvanced ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                        {showAdvanced ? "Hide" : "Show"} advanced options
-                      </button>
+                    {/* Add Another Fund Button */}
+                    <button
+                      type="button"
+                      onClick={addFund}
+                      className="w-full py-4 px-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all hover:opacity-80"
+                      style={{
+                        borderColor: "var(--accent-purple)",
+                        color: "var(--accent-purple)",
+                        backgroundColor: "transparent",
+                      }}
+                    >
+                      <Plus className="w-5 h-5" />
+                      <span className="font-semibold">Add Another Fund</span>
+                    </button>
 
-                      {showAdvanced && (
-                        <div>
-                          <label
-                            className="block text-sm font-medium mb-2"
-                            style={{ color: "var(--text-primary)" }}
-                          >
-                            Annual Step-up{" "}
-                            <span
-                              className="font-normal"
-                              style={{ color: "var(--text-tertiary)" }}
-                            >
-                              (Optional)
-                            </span>
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              value={formData.stepUpPercentage}
-                              onChange={(e) =>
-                                updateField("stepUpPercentage", e.target.value)
-                              }
-                              placeholder="10"
-                              className="w-full px-4 py-3 pr-10 rounded-xl border outline-none transition-all"
-                              style={{
-                                backgroundColor: "var(--bg-input)",
-                                borderColor: "var(--border-subtle)",
-                                color: "var(--text-primary)",
-                              }}
-                              min="0"
-                              max="100"
-                            />
-                            <span
-                              className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-medium"
-                              style={{ color: "var(--text-secondary)" }}
-                            >
-                              %
-                            </span>
-                          </div>
-                          <p
-                            className="mt-2 text-sm"
-                            style={{ color: "var(--text-tertiary)" }}
-                          >
-                            Yearly increase in SIP amount
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                    <p
+                      className="text-sm text-center"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      Add all the funds you want in this portfolio
+                    </p>
                   </div>
-                )}
-
-                {/* ===== LUMPSUM SECTION (Conditional) ===== */}
-                {formData.hasLumpsum && (
-                  <div
-                    className="p-5 rounded-xl border"
-                    style={{
-                      backgroundColor: "var(--bg-subtle)",
-                      borderColor: "var(--border-subtle)",
-                    }}
-                  >
-                    <div className="mb-4">
-                      <h4
-                        className="font-semibold flex items-center gap-2"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: "var(--accent-green)" }}
-                        />
-                        Lumpsum Investments
-                      </h4>
-                      <p
-                        className="text-sm mt-1"
-                        style={{ color: "var(--text-tertiary)" }}
-                      >
-                        Add one or more one-time investments for this asset
-                      </p>
-                    </div>
-
-                    <div className="space-y-4">
-                      {lumpsums.map((lumpsum, index) => (
-                        <div
-                          key={index}
-                          className="p-4 rounded-xl border"
-                          style={{
-                            backgroundColor: "var(--bg-card)",
-                            borderColor: "var(--border-medium)",
-                          }}
-                        >
-                          {/* Header with entry number and remove button */}
-                          <div className="flex items-center justify-between mb-3">
-                            <span
-                              className="text-sm font-medium"
-                              style={{ color: "var(--text-secondary)" }}
-                            >
-                              Lumpsum #{index + 1}
-                            </span>
-                            {lumpsums.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeLumpsum(index)}
-                                className="p-1.5 rounded-lg hover:opacity-80 transition-opacity"
-                                style={{ backgroundColor: "var(--bg-subtle)" }}
-                                title="Remove this entry"
-                              >
-                                <X
-                                  className="w-4 h-4"
-                                  style={{ color: "var(--text-tertiary)" }}
-                                />
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Lumpsum Amount */}
-                          <div className="mb-3">
-                            <label
-                              className="block text-sm font-medium mb-2"
-                              style={{ color: "var(--text-primary)" }}
-                            >
-                              Amount{" "}
-                              <span style={{ color: "var(--accent-red)" }}>
-                                *
-                              </span>
-                            </label>
-                            <div className="relative">
-                              <span
-                                className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium"
-                                style={{ color: "var(--text-secondary)" }}
-                              >
-                                ₹
-                              </span>
-                              <input
-                                type="number"
-                                value={lumpsum.amount}
-                                onChange={(e) =>
-                                  updateLumpsum(index, "amount", e.target.value)
-                                }
-                                placeholder="100000"
-                                className="w-full pl-10 pr-4 py-3 rounded-xl border outline-none transition-all"
-                                style={{
-                                  backgroundColor: "var(--bg-input)",
-                                  borderColor: "var(--border-subtle)",
-                                  color: "var(--text-primary)",
-                                }}
-                                min="1"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Lumpsum Date */}
-                          <div>
-                            <label
-                              className="block text-sm font-medium mb-2"
-                              style={{ color: "var(--text-primary)" }}
-                            >
-                              Investment Date{" "}
-                              <span style={{ color: "var(--accent-red)" }}>
-                                *
-                              </span>
-                            </label>
-                            <div className="grid grid-cols-2 gap-3">
-                              <select
-                                value={lumpsum.month}
-                                onChange={(e) =>
-                                  updateLumpsum(index, "month", e.target.value)
-                                }
-                                className="px-4 py-3 rounded-xl border outline-none transition-all"
-                                style={{
-                                  backgroundColor: "var(--bg-input)",
-                                  borderColor: "var(--border-subtle)",
-                                  color: "var(--text-primary)",
-                                }}
-                              >
-                                <option value="">Month</option>
-                                {months.map((month, idx) => (
-                                  <option key={month} value={idx + 1}>
-                                    {month}
-                                  </option>
-                                ))}
-                              </select>
-                              <select
-                                value={lumpsum.year}
-                                onChange={(e) =>
-                                  updateLumpsum(index, "year", e.target.value)
-                                }
-                                className="px-4 py-3 rounded-xl border outline-none transition-all"
-                                style={{
-                                  backgroundColor: "var(--bg-input)",
-                                  borderColor: "var(--border-subtle)",
-                                  color: "var(--text-primary)",
-                                }}
-                              >
-                                <option value="">Year</option>
-                                {years.map((year) => (
-                                  <option key={year} value={year}>
-                                    {year}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-
-                      {/* Add Another Lumpsum Button */}
-                      <button
-                        type="button"
-                        onClick={addLumpsum}
-                        className="w-full py-3 px-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all hover:opacity-80"
-                        style={{
-                          borderColor: "var(--border-medium)",
-                          color: "var(--accent-purple)",
-                        }}
-                      >
-                        <Plus className="w-5 h-5" />
-                        <span className="font-medium">Add another lumpsum</span>
-                      </button>
-
-                      <p
-                        className="text-sm text-center"
-                        style={{ color: "var(--text-tertiary)" }}
-                      >
-                        Many investors make multiple lumpsum investments over
-                        time
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Optional Notes */}
-                <div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateField("showNotes", !formData.showNotes)
-                    }
-                    className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-80"
-                    style={{ color: "var(--accent-purple)" }}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add notes (optional)
-                  </button>
-
-                  {formData.showNotes && (
-                    <div className="mt-4">
-                      <textarea
-                        value={formData.notes}
-                        onChange={(e) => updateField("notes", e.target.value)}
-                        placeholder="Any additional info you want to remember about this investment"
-                        rows="3"
-                        className="w-full px-4 py-3 rounded-xl border outline-none transition-all resize-none"
-                        style={{
-                          backgroundColor: "var(--bg-input)",
-                          borderColor: "var(--border-subtle)",
-                          color: "var(--text-primary)",
-                        }}
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
             )}
 
-            {/* Navigation Buttons */}
+            {/* ═══════════════════════════════════════════════════════════════ */}
+            {/* SECTION 2: Investment Details (Per Fund) */}
+            {/* ═══════════════════════════════════════════════════════════════ */}
+            {currentSection === 2 && (
+              <div className="space-y-6">
+                {/* Portfolio Summary */}
+                <div
+                  className="p-4 rounded-xl flex items-center gap-3"
+                  style={{
+                    backgroundColor: "var(--bg-subtle)",
+                    borderLeft: "4px solid var(--accent-purple)",
+                  }}
+                >
+                  <Briefcase
+                    className="w-5 h-5"
+                    style={{ color: "var(--accent-purple)" }}
+                  />
+                  <div>
+                    <span
+                      className="font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {portfolioName}
+                    </span>
+                    <span
+                      className="text-sm ml-2"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      — {funds.length} {funds.length === 1 ? "fund" : "funds"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fund Investment Details */}
+                {funds.map((fund, fundIndex) => (
+                  <div
+                    key={fund.id}
+                    className="rounded-xl border overflow-hidden"
+                    style={{
+                      backgroundColor: "var(--bg-card)",
+                      borderColor: "var(--border-medium)",
+                    }}
+                  >
+                    {/* Fund Header (Collapsible) */}
+                    <button
+                      type="button"
+                      onClick={() => toggleFundCollapse(fund.id)}
+                      className="w-full p-4 flex items-center justify-between text-left"
+                      style={{
+                        backgroundColor: "var(--bg-subtle)",
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
+                          style={{
+                            backgroundColor: "var(--accent-purple)",
+                            color: "white",
+                          }}
+                        >
+                          {fundIndex + 1}
+                        </div>
+                        <div>
+                          <span
+                            className="font-semibold block"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {fund.assetName}
+                          </span>
+                          <span
+                            className="text-xs"
+                            style={{ color: "var(--text-tertiary)" }}
+                          >
+                            {fund.assetType.replace("-", " ").toUpperCase()} •
+                            Since {fund.investmentStartYear}
+                          </span>
+                        </div>
+                      </div>
+                      {fund.isCollapsed ? (
+                        <ChevronDown
+                          className="w-5 h-5"
+                          style={{ color: "var(--text-secondary)" }}
+                        />
+                      ) : (
+                        <ChevronUp
+                          className="w-5 h-5"
+                          style={{ color: "var(--text-secondary)" }}
+                        />
+                      )}
+                    </button>
+
+                    {/* Fund Details (Expandable) */}
+                    {!fund.isCollapsed && (
+                      <div className="p-5 space-y-6">
+                        {/* Investment Method Selection */}
+                        <div>
+                          <label
+                            className="block text-sm font-medium mb-3"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            How do you invest in {fund.assetName || "this fund"}
+                            ?{" "}
+                            <span style={{ color: "var(--accent-red)" }}>
+                              *
+                            </span>
+                          </label>
+                          <p
+                            className="text-sm mb-4"
+                            style={{ color: "var(--text-tertiary)" }}
+                          >
+                            Select all that apply
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* SIP Toggle */}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateFund(fund.id, "hasSIP", !fund.hasSIP)
+                              }
+                              className="flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left"
+                              style={{
+                                backgroundColor: fund.hasSIP
+                                  ? "var(--bg-subtle)"
+                                  : "var(--bg-input)",
+                                borderColor: fund.hasSIP
+                                  ? "var(--accent-purple)"
+                                  : "var(--border-subtle)",
+                              }}
+                            >
+                              <div
+                                className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
+                                style={{
+                                  borderColor: fund.hasSIP
+                                    ? "var(--accent-purple)"
+                                    : "var(--border-medium)",
+                                  backgroundColor: fund.hasSIP
+                                    ? "var(--accent-purple)"
+                                    : "transparent",
+                                }}
+                              >
+                                {fund.hasSIP && (
+                                  <svg
+                                    className="w-3 h-3 text-white"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+                              <div>
+                                <span
+                                  className="font-semibold block"
+                                  style={{ color: "var(--text-primary)" }}
+                                >
+                                  SIP
+                                </span>
+                                <span
+                                  className="text-xs"
+                                  style={{ color: "var(--text-tertiary)" }}
+                                >
+                                  Monthly investment
+                                </span>
+                              </div>
+                            </button>
+
+                            {/* Lumpsum Toggle */}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateFund(
+                                  fund.id,
+                                  "hasLumpsum",
+                                  !fund.hasLumpsum
+                                )
+                              }
+                              className="flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left"
+                              style={{
+                                backgroundColor: fund.hasLumpsum
+                                  ? "var(--bg-subtle)"
+                                  : "var(--bg-input)",
+                                borderColor: fund.hasLumpsum
+                                  ? "var(--accent-purple)"
+                                  : "var(--border-subtle)",
+                              }}
+                            >
+                              <div
+                                className="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
+                                style={{
+                                  borderColor: fund.hasLumpsum
+                                    ? "var(--accent-purple)"
+                                    : "var(--border-medium)",
+                                  backgroundColor: fund.hasLumpsum
+                                    ? "var(--accent-purple)"
+                                    : "transparent",
+                                }}
+                              >
+                                {fund.hasLumpsum && (
+                                  <svg
+                                    className="w-3 h-3 text-white"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+                              <div>
+                                <span
+                                  className="font-semibold block"
+                                  style={{ color: "var(--text-primary)" }}
+                                >
+                                  Lumpsum
+                                </span>
+                                <span
+                                  className="text-xs"
+                                  style={{ color: "var(--text-tertiary)" }}
+                                >
+                                  One-time investments
+                                </span>
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* ===== SIP SECTION (Conditional) ===== */}
+                        {fund.hasSIP && (
+                          <div
+                            className="p-5 rounded-xl border"
+                            style={{
+                              backgroundColor: "var(--bg-subtle)",
+                              borderColor: "var(--border-subtle)",
+                            }}
+                          >
+                            <h4
+                              className="font-semibold mb-4 flex items-center gap-2"
+                              style={{ color: "var(--text-primary)" }}
+                            >
+                              <span
+                                className="w-2 h-2 rounded-full"
+                                style={{
+                                  backgroundColor: "var(--accent-purple)",
+                                }}
+                              />
+                              SIP Details
+                            </h4>
+
+                            <div className="space-y-4">
+                              {/* Monthly SIP Amount */}
+                              <div>
+                                <label
+                                  className="block text-sm font-medium mb-2"
+                                  style={{ color: "var(--text-primary)" }}
+                                >
+                                  Monthly SIP Amount{" "}
+                                  <span style={{ color: "var(--accent-red)" }}>
+                                    *
+                                  </span>
+                                </label>
+                                <div className="relative">
+                                  <span
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium"
+                                    style={{ color: "var(--text-secondary)" }}
+                                  >
+                                    ₹
+                                  </span>
+                                  <input
+                                    type="number"
+                                    value={fund.sipAmount}
+                                    onChange={(e) =>
+                                      updateFund(
+                                        fund.id,
+                                        "sipAmount",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="5000"
+                                    className="w-full pl-10 pr-4 py-3 rounded-xl border outline-none transition-all"
+                                    style={{
+                                      backgroundColor: "var(--bg-input)",
+                                      borderColor: "var(--border-subtle)",
+                                      color: "var(--text-primary)",
+                                    }}
+                                    min="1"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* SIP Start Date */}
+                              <div>
+                                <label
+                                  className="block text-sm font-medium mb-2"
+                                  style={{ color: "var(--text-primary)" }}
+                                >
+                                  SIP Start Date{" "}
+                                  <span style={{ color: "var(--accent-red)" }}>
+                                    *
+                                  </span>
+                                </label>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <select
+                                    value={fund.sipStartMonth}
+                                    onChange={(e) =>
+                                      updateFund(
+                                        fund.id,
+                                        "sipStartMonth",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="px-4 py-3 rounded-xl border outline-none transition-all"
+                                    style={{
+                                      backgroundColor: "var(--bg-input)",
+                                      borderColor: "var(--border-subtle)",
+                                      color: "var(--text-primary)",
+                                    }}
+                                  >
+                                    <option value="">Month</option>
+                                    {months.map((month, idx) => (
+                                      <option key={month} value={idx + 1}>
+                                        {month}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <select
+                                    value={fund.sipStartYear}
+                                    onChange={(e) =>
+                                      updateFund(
+                                        fund.id,
+                                        "sipStartYear",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="px-4 py-3 rounded-xl border outline-none transition-all"
+                                    style={{
+                                      backgroundColor: "var(--bg-input)",
+                                      borderColor: "var(--border-subtle)",
+                                      color: "var(--text-primary)",
+                                    }}
+                                  >
+                                    <option value="">Year</option>
+                                    {years.map((year) => (
+                                      <option key={year} value={year}>
+                                        {year}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              {/* SIP Status Toggle */}
+                              <div className="flex items-center justify-between">
+                                <span
+                                  className="text-sm font-medium"
+                                  style={{ color: "var(--text-primary)" }}
+                                >
+                                  SIP is ongoing
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateFund(
+                                      fund.id,
+                                      "sipOngoing",
+                                      !fund.sipOngoing
+                                    )
+                                  }
+                                  className="relative w-12 h-6 rounded-full transition-all"
+                                  style={{
+                                    backgroundColor: fund.sipOngoing
+                                      ? "var(--accent-purple)"
+                                      : "var(--border-medium)",
+                                  }}
+                                >
+                                  <span
+                                    className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all"
+                                    style={{
+                                      left: fund.sipOngoing
+                                        ? "calc(100% - 20px)"
+                                        : "4px",
+                                    }}
+                                  />
+                                </button>
+                              </div>
+
+                              {/* SIP End Date (conditional) */}
+                              {!fund.sipOngoing && (
+                                <div>
+                                  <label
+                                    className="block text-sm font-medium mb-2"
+                                    style={{ color: "var(--text-primary)" }}
+                                  >
+                                    SIP End Date
+                                  </label>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <select
+                                      value={fund.sipEndMonth}
+                                      onChange={(e) =>
+                                        updateFund(
+                                          fund.id,
+                                          "sipEndMonth",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="px-4 py-3 rounded-xl border outline-none transition-all"
+                                      style={{
+                                        backgroundColor: "var(--bg-input)",
+                                        borderColor: "var(--border-subtle)",
+                                        color: "var(--text-primary)",
+                                      }}
+                                    >
+                                      <option value="">Month</option>
+                                      {months.map((month, idx) => (
+                                        <option key={month} value={idx + 1}>
+                                          {month}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <select
+                                      value={fund.sipEndYear}
+                                      onChange={(e) =>
+                                        updateFund(
+                                          fund.id,
+                                          "sipEndYear",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="px-4 py-3 rounded-xl border outline-none transition-all"
+                                      style={{
+                                        backgroundColor: "var(--bg-input)",
+                                        borderColor: "var(--border-subtle)",
+                                        color: "var(--text-primary)",
+                                      }}
+                                    >
+                                      <option value="">Year</option>
+                                      {years.map((year) => (
+                                        <option key={year} value={year}>
+                                          {year}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Advanced: Step-up */}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateFund(
+                                    fund.id,
+                                    "showAdvanced",
+                                    !fund.showAdvanced
+                                  )
+                                }
+                                className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-80"
+                                style={{ color: "var(--accent-purple)" }}
+                              >
+                                {fund.showAdvanced ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
+                                )}
+                                {fund.showAdvanced ? "Hide" : "Show"} advanced
+                                options
+                              </button>
+
+                              {fund.showAdvanced && (
+                                <div>
+                                  <label
+                                    className="block text-sm font-medium mb-2"
+                                    style={{ color: "var(--text-primary)" }}
+                                  >
+                                    Annual Step-up{" "}
+                                    <span
+                                      className="font-normal"
+                                      style={{ color: "var(--text-tertiary)" }}
+                                    >
+                                      (Optional)
+                                    </span>
+                                  </label>
+                                  <div className="relative">
+                                    <input
+                                      type="number"
+                                      value={fund.stepUpPercentage}
+                                      onChange={(e) =>
+                                        updateFund(
+                                          fund.id,
+                                          "stepUpPercentage",
+                                          e.target.value
+                                        )
+                                      }
+                                      placeholder="10"
+                                      className="w-full px-4 py-3 pr-10 rounded-xl border outline-none transition-all"
+                                      style={{
+                                        backgroundColor: "var(--bg-input)",
+                                        borderColor: "var(--border-subtle)",
+                                        color: "var(--text-primary)",
+                                      }}
+                                      min="0"
+                                      max="100"
+                                    />
+                                    <span
+                                      className="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-medium"
+                                      style={{ color: "var(--text-secondary)" }}
+                                    >
+                                      %
+                                    </span>
+                                  </div>
+                                  <p
+                                    className="mt-2 text-sm"
+                                    style={{ color: "var(--text-tertiary)" }}
+                                  >
+                                    Yearly increase in SIP amount
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ===== LUMPSUM SECTION (Conditional) ===== */}
+                        {fund.hasLumpsum && (
+                          <div
+                            className="p-5 rounded-xl border"
+                            style={{
+                              backgroundColor: "var(--bg-subtle)",
+                              borderColor: "var(--border-subtle)",
+                            }}
+                          >
+                            <div className="mb-4">
+                              <h4
+                                className="font-semibold flex items-center gap-2"
+                                style={{ color: "var(--text-primary)" }}
+                              >
+                                <span
+                                  className="w-2 h-2 rounded-full"
+                                  style={{
+                                    backgroundColor: "var(--accent-green)",
+                                  }}
+                                />
+                                Lumpsum Investments
+                              </h4>
+                              <p
+                                className="text-sm mt-1"
+                                style={{ color: "var(--text-tertiary)" }}
+                              >
+                                Add one or more one-time investments
+                              </p>
+                            </div>
+
+                            <div className="space-y-4">
+                              {fund.lumpsums.map((lumpsum, lumpsumIndex) => (
+                                <div
+                                  key={lumpsumIndex}
+                                  className="p-4 rounded-xl border"
+                                  style={{
+                                    backgroundColor: "var(--bg-card)",
+                                    borderColor: "var(--border-medium)",
+                                  }}
+                                >
+                                  {/* Lumpsum Header */}
+                                  <div className="flex items-center justify-between mb-3">
+                                    <span
+                                      className="text-sm font-medium"
+                                      style={{ color: "var(--text-secondary)" }}
+                                    >
+                                      Lumpsum #{lumpsumIndex + 1}
+                                    </span>
+                                    {fund.lumpsums.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          removeLumpsum(fund.id, lumpsumIndex)
+                                        }
+                                        className="p-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                                        style={{
+                                          backgroundColor: "var(--bg-subtle)",
+                                        }}
+                                        title="Remove this entry"
+                                      >
+                                        <X
+                                          className="w-4 h-4"
+                                          style={{
+                                            color: "var(--text-tertiary)",
+                                          }}
+                                        />
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Lumpsum Amount */}
+                                  <div className="mb-3">
+                                    <label
+                                      className="block text-sm font-medium mb-2"
+                                      style={{ color: "var(--text-primary)" }}
+                                    >
+                                      Amount{" "}
+                                      <span
+                                        style={{ color: "var(--accent-red)" }}
+                                      >
+                                        *
+                                      </span>
+                                    </label>
+                                    <div className="relative">
+                                      <span
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-medium"
+                                        style={{
+                                          color: "var(--text-secondary)",
+                                        }}
+                                      >
+                                        ₹
+                                      </span>
+                                      <input
+                                        type="number"
+                                        value={lumpsum.amount}
+                                        onChange={(e) =>
+                                          updateLumpsum(
+                                            fund.id,
+                                            lumpsumIndex,
+                                            "amount",
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="100000"
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl border outline-none transition-all"
+                                        style={{
+                                          backgroundColor: "var(--bg-input)",
+                                          borderColor: "var(--border-subtle)",
+                                          color: "var(--text-primary)",
+                                        }}
+                                        min="1"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Lumpsum Date */}
+                                  <div>
+                                    <label
+                                      className="block text-sm font-medium mb-2"
+                                      style={{ color: "var(--text-primary)" }}
+                                    >
+                                      Investment Date{" "}
+                                      <span
+                                        style={{ color: "var(--accent-red)" }}
+                                      >
+                                        *
+                                      </span>
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <select
+                                        value={lumpsum.month}
+                                        onChange={(e) =>
+                                          updateLumpsum(
+                                            fund.id,
+                                            lumpsumIndex,
+                                            "month",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="px-4 py-3 rounded-xl border outline-none transition-all"
+                                        style={{
+                                          backgroundColor: "var(--bg-input)",
+                                          borderColor: "var(--border-subtle)",
+                                          color: "var(--text-primary)",
+                                        }}
+                                      >
+                                        <option value="">Month</option>
+                                        {months.map((month, idx) => (
+                                          <option key={month} value={idx + 1}>
+                                            {month}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <select
+                                        value={lumpsum.year}
+                                        onChange={(e) =>
+                                          updateLumpsum(
+                                            fund.id,
+                                            lumpsumIndex,
+                                            "year",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="px-4 py-3 rounded-xl border outline-none transition-all"
+                                        style={{
+                                          backgroundColor: "var(--bg-input)",
+                                          borderColor: "var(--border-subtle)",
+                                          color: "var(--text-primary)",
+                                        }}
+                                      >
+                                        <option value="">Year</option>
+                                        {years.map((year) => (
+                                          <option key={year} value={year}>
+                                            {year}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Add Another Lumpsum */}
+                              <button
+                                type="button"
+                                onClick={() => addLumpsum(fund.id)}
+                                className="w-full py-3 px-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all hover:opacity-80"
+                                style={{
+                                  borderColor: "var(--border-medium)",
+                                  color: "var(--accent-purple)",
+                                }}
+                              >
+                                <Plus className="w-5 h-5" />
+                                <span className="font-medium">
+                                  Add another lumpsum
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════ */}
+            {/* NAVIGATION BUTTONS */}
+            {/* ═══════════════════════════════════════════════════════════════ */}
             <div
               className="flex items-center justify-between mt-8 pt-6 border-t"
               style={{ borderColor: "var(--border-subtle)" }}
@@ -968,13 +1370,14 @@ export default function ManualEntryPage() {
                 <button
                   type="submit"
                   disabled={!canProceed()}
-                  className="px-6 py-2.5 rounded-xl font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-8 py-3 rounded-xl font-semibold transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   style={{
                     backgroundColor: "var(--accent-purple)",
                     color: "white",
                   }}
                 >
-                  Add Investment
+                  <TrendingUp className="w-5 h-5" />
+                  Create Portfolio
                 </button>
               )}
             </div>
