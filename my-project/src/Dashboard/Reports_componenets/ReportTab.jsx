@@ -1,8 +1,14 @@
 import React, { useState } from "react";
 import PrivateLayout from "../PrivateLayout";
+import ReportEmptyState from "./ReportEmptyState";
+import { PieChart, ShieldAlert, Layers } from "lucide-react";
 
 const ReportTab = () => {
   const [activeTab, setActiveTab] = useState("summary");
+
+  // Determine if user has portfolio data - single source of truth
+  // TODO: Replace with actual data check from context/API
+  const hasPortfolioData = false;
 
   const tabs = [
     { id: "summary", label: "Summary" },
@@ -12,8 +18,8 @@ const ReportTab = () => {
     { id: "overlap", label: "Overlap & Concentration" },
   ];
 
-  // Static mock data
-  const mockData = {
+  // Data for populated state
+  const populatedData = {
     totalInvested: "₹12,50,000",
     currentValue: "₹14,85,230",
     numberOfFunds: 8,
@@ -23,20 +29,62 @@ const ReportTab = () => {
     riskLevel: "Moderate",
   };
 
+  // Default data for empty state (Summary & Performance always show)
+  const emptyData = {
+    totalInvested: "₹0",
+    currentValue: "₹0",
+    numberOfFunds: 0,
+    investmentDuration: "—",
+    absoluteReturn: "₹0",
+    percentageReturn: "0%",
+    riskLevel: "—",
+  };
+
+  const mockData = hasPortfolioData ? populatedData : emptyData;
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "summary":
-        return <SummaryTab data={mockData} />;
+        // Summary always renders with zero defaults
+        return <SummaryTab data={mockData} hasData={hasPortfolioData} />;
       case "performance":
-        return <PerformanceTab data={mockData} />;
+        // Performance always renders with zero/placeholder
+        return <PerformanceTab data={mockData} hasData={hasPortfolioData} />;
       case "allocation":
-        return <AllocationTab />;
+        // Allocation shows empty state if no data
+        return hasPortfolioData ? (
+          <AllocationTab />
+        ) : (
+          <ReportEmptyState
+            icon={PieChart}
+            title="No Allocation Data Available"
+            description="This report shows how your investments are distributed across different funds and asset classes. Add your portfolio to see your personalized allocation breakdown."
+          />
+        );
       case "risk":
-        return <RiskTab data={mockData} />;
+        // Risk shows empty state if no data
+        return hasPortfolioData ? (
+          <RiskTab data={mockData} />
+        ) : (
+          <ReportEmptyState
+            icon={ShieldAlert}
+            title="No Risk Analysis Available"
+            description="This report evaluates your portfolio's risk level based on asset allocation and historical volatility. Add your investments to see potential market impact scenarios."
+          />
+        );
       case "overlap":
-        return <OverlapTab />;
+        // Overlap shows empty state if no data
+        return hasPortfolioData ? (
+          <OverlapTab />
+        ) : (
+          <ReportEmptyState
+            icon={Layers}
+            title="No Overlap Data Available"
+            description="This report identifies hidden stock duplications across your mutual funds that may reduce diversification. Add multiple funds to analyze concentration risks."
+          />
+        );
       default:
-        return <SummaryTab data={mockData} />;
+        return <SummaryTab data={mockData} hasData={hasPortfolioData} />;
     }
   };
 
@@ -88,7 +136,7 @@ const ReportTab = () => {
 };
 
 //Summary tab
-const SummaryTab = ({ data }) => {
+const SummaryTab = ({ data, hasData }) => {
   const infoCards = [
     { label: "Total Invested", value: data.totalInvested, icon: "💰" },
     { label: "Current Value", value: data.currentValue, icon: "📈" },
@@ -102,6 +150,23 @@ const SummaryTab = ({ data }) => {
 
   return (
     <div className="space-y-6">
+      {/* Empty state hint banner */}
+      {!hasData && (
+        <div
+          className="rounded-xl p-4 flex items-center gap-3"
+          style={{
+            background: "rgba(147, 51, 234, 0.05)",
+            border: "1px dashed var(--accent-purple)",
+          }}
+        >
+          <span className="text-xl">💡</span>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            Add your portfolio to see real investment data. Currently showing
+            default values.
+          </p>
+        </div>
+      )}
+
       {/**Info Cards Grid*/}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {infoCards.map((card, index) => (
@@ -112,6 +177,7 @@ const SummaryTab = ({ data }) => {
               background: "var(--bg-card)",
               border: "1px solid var(--border-subtle)",
               boxShadow: "var(--shadow-card)",
+              opacity: hasData ? 1 : 0.7,
             }}
           >
             <div className="flex items-center justify-between">
@@ -161,9 +227,26 @@ const SummaryTab = ({ data }) => {
 };
 
 // ==================== PERFORMANCE TAB ====================
-const PerformanceTab = ({ data }) => {
+const PerformanceTab = ({ data, hasData }) => {
   return (
     <div className="space-y-6">
+      {/* Empty state hint banner */}
+      {!hasData && (
+        <div
+          className="rounded-xl p-4 flex items-center gap-3"
+          style={{
+            background: "rgba(16, 185, 129, 0.05)",
+            border: "1px dashed #10b981",
+          }}
+        >
+          <span className="text-xl">📊</span>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            Add your portfolio to track investment performance over time.
+            Currently showing baseline values.
+          </p>
+        </div>
+      )}
+
       {/* Chart Placeholder */}
       <div
         className="rounded-xl p-6"
@@ -187,13 +270,33 @@ const PerformanceTab = ({ data }) => {
           }}
         >
           <div className="text-center">
-            <span className="text-4xl">📊</span>
-            <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
-              Performance Chart Placeholder
-            </p>
-            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
-              Invested vs Value trend line
-            </p>
+            {hasData ? (
+              <>
+                <span className="text-4xl">📊</span>
+                <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
+                  Performance Chart Placeholder
+                </p>
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  Invested vs Value trend line
+                </p>
+              </>
+            ) : (
+              <>
+                <span className="text-4xl">📉</span>
+                <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
+                  No Performance Data Yet
+                </p>
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  Your growth chart will appear here once you add investments
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -206,6 +309,7 @@ const PerformanceTab = ({ data }) => {
             background: "var(--bg-card)",
             border: "1px solid var(--border-subtle)",
             boxShadow: "var(--shadow-card)",
+            opacity: hasData ? 1 : 0.7,
           }}
         >
           <p
@@ -214,7 +318,10 @@ const PerformanceTab = ({ data }) => {
           >
             Absolute Return
           </p>
-          <p className="mt-2 text-3xl font-bold" style={{ color: "#10b981" }}>
+          <p
+            className="mt-2 text-3xl font-bold"
+            style={{ color: hasData ? "#10b981" : "var(--text-tertiary)" }}
+          >
             {data.absoluteReturn}
           </p>
           <p className="mt-1 text-sm" style={{ color: "var(--text-tertiary)" }}>
@@ -227,6 +334,7 @@ const PerformanceTab = ({ data }) => {
             background: "var(--bg-card)",
             border: "1px solid var(--border-subtle)",
             boxShadow: "var(--shadow-card)",
+            opacity: hasData ? 1 : 0.7,
           }}
         >
           <p
@@ -235,7 +343,10 @@ const PerformanceTab = ({ data }) => {
           >
             Percentage Return
           </p>
-          <p className="mt-2 text-3xl font-bold" style={{ color: "#10b981" }}>
+          <p
+            className="mt-2 text-3xl font-bold"
+            style={{ color: hasData ? "#10b981" : "var(--text-tertiary)" }}
+          >
             {data.percentageReturn}
           </p>
           <p className="mt-1 text-sm" style={{ color: "var(--text-tertiary)" }}>
