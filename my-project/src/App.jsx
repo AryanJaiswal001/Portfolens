@@ -18,7 +18,7 @@ import ManualEntryPage from "./Dashboard/Dashboard_inner_components/ManualEntry"
 import UploadPage from "./Dashboard/Dashboard_inner_components/UploadPage";
 
 import "./App.css";
-import SurveyPage from "./Onboarding_components/Survey";
+
 
 function App() {
   return (

@@ -17,9 +17,7 @@ export default function InsightsResults() {
               Understand how your portfolio behaves over time
             </p>
           </div>
-          <div className="ml-6">
-            <ThemeToggle />
-          </div>
+          
         </div>
       </div>
 
