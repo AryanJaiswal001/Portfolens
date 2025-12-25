@@ -1,14 +1,21 @@
 import React, { useState } from "react";
 import PrivateLayout from "../PrivateLayout";
 import ReportEmptyState from "./ReportEmptyState";
-import { PieChart, ShieldAlert, Layers } from "lucide-react";
+import { usePortfolio } from "../../context/PortfolioContext";
+import { formatCurrency } from "../../data/samplePortfolio";
+import { PieChart, ShieldAlert, Layers, FlaskConical } from "lucide-react";
+import {
+  PerformanceChart,
+  AllocationDonutChart,
+  OverlapVisualization,
+  SectorConcentrationChart,
+} from "../../components/charts";
 
 const ReportTab = () => {
   const [activeTab, setActiveTab] = useState("summary");
 
-  // Determine if user has portfolio data - single source of truth
-  // TODO: Replace with actual data check from context/API
-  const hasPortfolioData = false;
+  // Get portfolio data from context - single source of truth
+  const { activePortfolio, hasPortfolio, isSample } = usePortfolio();
 
   const tabs = [
     { id: "summary", label: "Summary" },
@@ -18,42 +25,43 @@ const ReportTab = () => {
     { id: "overlap", label: "Overlap & Concentration" },
   ];
 
-  // Data for populated state
-  const populatedData = {
-    totalInvested: "₹12,50,000",
-    currentValue: "₹14,85,230",
-    numberOfFunds: 8,
-    investmentDuration: "2 years 4 months",
-    absoluteReturn: "₹2,35,230",
-    percentageReturn: "18.82%",
-    riskLevel: "Moderate",
+  // Build report data from activePortfolio or use defaults
+  const reportData = {
+    totalInvested: hasPortfolio
+      ? formatCurrency(activePortfolio.totalInvested)
+      : "₹0",
+    currentValue: hasPortfolio
+      ? formatCurrency(activePortfolio.currentValue)
+      : "₹0",
+    numberOfFunds: activePortfolio?.numberOfFunds ?? 0,
+    investmentDuration: activePortfolio?.investmentDuration ?? "—",
+    absoluteReturn: hasPortfolio
+      ? formatCurrency(activePortfolio.absoluteReturn)
+      : "₹0",
+    percentageReturn: hasPortfolio
+      ? `${activePortfolio.percentageReturn}%`
+      : "0%",
+    riskLevel: activePortfolio?.riskLevel ?? "—",
+    funds: activePortfolio?.funds ?? [],
+    allocation: activePortfolio?.allocation ?? {},
+    stockOverlap: activePortfolio?.stockOverlap ?? [],
+    sectorConcentration: activePortfolio?.sectorConcentration ?? [],
+    riskScenarios: activePortfolio?.riskScenarios ?? null,
+    performanceHistory: activePortfolio?.performanceHistory ?? [],
   };
-
-  // Default data for empty state (Summary & Performance always show)
-  const emptyData = {
-    totalInvested: "₹0",
-    currentValue: "₹0",
-    numberOfFunds: 0,
-    investmentDuration: "—",
-    absoluteReturn: "₹0",
-    percentageReturn: "0%",
-    riskLevel: "—",
-  };
-
-  const mockData = hasPortfolioData ? populatedData : emptyData;
 
   const renderTabContent = () => {
     switch (activeTab) {
       case "summary":
         // Summary always renders with zero defaults
-        return <SummaryTab data={mockData} hasData={hasPortfolioData} />;
+        return <SummaryTab data={reportData} hasData={hasPortfolio} />;
       case "performance":
         // Performance always renders with zero/placeholder
-        return <PerformanceTab data={mockData} hasData={hasPortfolioData} />;
+        return <PerformanceTab data={reportData} hasData={hasPortfolio} />;
       case "allocation":
         // Allocation shows empty state if no data
-        return hasPortfolioData ? (
-          <AllocationTab />
+        return hasPortfolio ? (
+          <AllocationTab data={reportData} />
         ) : (
           <ReportEmptyState
             icon={PieChart}
@@ -63,8 +71,8 @@ const ReportTab = () => {
         );
       case "risk":
         // Risk shows empty state if no data
-        return hasPortfolioData ? (
-          <RiskTab data={mockData} />
+        return hasPortfolio ? (
+          <RiskTab data={reportData} />
         ) : (
           <ReportEmptyState
             icon={ShieldAlert}
@@ -74,8 +82,8 @@ const ReportTab = () => {
         );
       case "overlap":
         // Overlap shows empty state if no data
-        return hasPortfolioData ? (
-          <OverlapTab />
+        return hasPortfolio ? (
+          <OverlapTab data={reportData} />
         ) : (
           <ReportEmptyState
             icon={Layers}
@@ -84,7 +92,7 @@ const ReportTab = () => {
           />
         );
       default:
-        return <SummaryTab data={mockData} hasData={hasPortfolioData} />;
+        return <SummaryTab data={reportData} hasData={hasPortfolio} />;
     }
   };
 
@@ -93,12 +101,29 @@ const ReportTab = () => {
       <div className="space-y-6">
         {/**Page header*/}
         <div>
-          <h1
-            className="text-3xl font-bold"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Reports
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1
+              className="text-3xl font-bold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Reports
+            </h1>
+            {/* Sample Data Badge */}
+            {isSample && (
+              <span
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(147, 51, 234, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%)",
+                  color: "var(--accent-purple)",
+                  border: "1px solid var(--accent-purple)",
+                }}
+              >
+                <FlaskConical className="w-3 h-3" />
+                Sample Data
+              </span>
+            )}
+          </div>
           <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
             Detailed analysis and explanations of your portfolio insights
           </p>
@@ -247,7 +272,7 @@ const PerformanceTab = ({ data, hasData }) => {
         </div>
       )}
 
-      {/* Chart Placeholder */}
+      {/* Performance Chart */}
       <div
         className="rounded-xl p-6"
         style={{
@@ -262,43 +287,11 @@ const PerformanceTab = ({ data, hasData }) => {
         >
           Invested vs Current Value Over Time
         </h3>
-        <div
-          className="h-64 rounded-lg flex items-center justify-center"
-          style={{
-            background: "var(--bg-input)",
-            border: "2px dashed var(--border-medium)",
-          }}
-        >
-          <div className="text-center">
-            {hasData ? (
-              <>
-                <span className="text-4xl">📊</span>
-                <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
-                  Performance Chart Placeholder
-                </p>
-                <p
-                  className="text-sm"
-                  style={{ color: "var(--text-tertiary)" }}
-                >
-                  Invested vs Value trend line
-                </p>
-              </>
-            ) : (
-              <>
-                <span className="text-4xl">📉</span>
-                <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
-                  No Performance Data Yet
-                </p>
-                <p
-                  className="text-sm"
-                  style={{ color: "var(--text-tertiary)" }}
-                >
-                  Your growth chart will appear here once you add investments
-                </p>
-              </>
-            )}
-          </div>
-        </div>
+        <PerformanceChart
+          data={data.performanceHistory}
+          height={256}
+          showLegend={true}
+        />
       </div>
 
       {/* Metrics Cards */}
@@ -382,24 +375,13 @@ const PerformanceTab = ({ data, hasData }) => {
 };
 
 // ==================== ALLOCATION TAB ====================
-const AllocationTab = () => {
-  const fundAllocations = [
-    {
-      fund: "HDFC Mid-Cap Opportunities",
-      allocation: "25%",
-      amount: "₹3,12,500",
-    },
-    { fund: "Axis Bluechip Fund", allocation: "20%", amount: "₹2,50,000" },
-    { fund: "SBI Small Cap Fund", allocation: "15%", amount: "₹1,87,500" },
-    {
-      fund: "ICICI Prudential Value Discovery",
-      allocation: "15%",
-      amount: "₹1,87,500",
-    },
-    { fund: "Parag Parikh Flexi Cap", allocation: "10%", amount: "₹1,25,000" },
-    { fund: "Kotak Equity Hybrid", allocation: "10%", amount: "₹1,25,000" },
-    { fund: "Mirae Asset Large Cap", allocation: "5%", amount: "₹62,500" },
-  ];
+const AllocationTab = ({ data }) => {
+  // Use funds from context data
+  const fundAllocations = data.funds.map((fund) => ({
+    fund: fund.name,
+    allocation: `${fund.allocation}%`,
+    amount: formatCurrency(fund.invested),
+  }));
 
   return (
     <div className="space-y-6">
@@ -418,22 +400,13 @@ const AllocationTab = () => {
         >
           Asset Allocation
         </h3>
-        <div
-          className="h-64 rounded-lg flex items-center justify-center"
-          style={{
-            background: "var(--bg-input)",
-            border: "2px dashed var(--border-medium)",
-          }}
-        >
-          <div className="text-center">
-            <span className="text-4xl">🥧</span>
-            <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
-              Asset Allocation Chart Placeholder
-            </p>
-            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
-              Pie/Donut chart visualization
-            </p>
-          </div>
+        <div className="flex justify-center py-4">
+          <AllocationDonutChart
+            data={data.allocation}
+            size={200}
+            strokeWidth={35}
+            showLegend={true}
+          />
         </div>
       </div>
 
@@ -660,7 +633,18 @@ const RiskTab = ({ data }) => {
               If market falls by 20%
             </p>
             <p className="mt-1 text-sm" style={{ color: "#f87171" }}>
-              Your portfolio may decline by approximately ₹2,50,000 - ₹3,00,000
+              Your portfolio may decline by approximately{" "}
+              {data.riskScenarios
+                ? formatCurrency(
+                    data.riskScenarios.marketFall20.potentialLossMin
+                  )
+                : "₹0"}{" "}
+              -{" "}
+              {data.riskScenarios
+                ? formatCurrency(
+                    data.riskScenarios.marketFall20.potentialLossMax
+                  )
+                : "₹0"}
             </p>
           </div>
           <div
@@ -674,7 +658,18 @@ const RiskTab = ({ data }) => {
               If market falls by 10%
             </p>
             <p className="mt-1 text-sm" style={{ color: "#fbbf24" }}>
-              Your portfolio may decline by approximately ₹1,25,000 - ₹1,50,000
+              Your portfolio may decline by approximately{" "}
+              {data.riskScenarios
+                ? formatCurrency(
+                    data.riskScenarios.marketFall10.potentialLossMin
+                  )
+                : "₹0"}{" "}
+              -{" "}
+              {data.riskScenarios
+                ? formatCurrency(
+                    data.riskScenarios.marketFall10.potentialLossMax
+                  )
+                : "₹0"}
             </p>
           </div>
         </div>
@@ -707,10 +702,42 @@ const RiskTab = ({ data }) => {
 };
 
 // ==================== OVERLAP & CONCENTRATION TAB ====================
-const OverlapTab = () => {
+const OverlapTab = ({ data }) => {
+  const stockOverlap = data.stockOverlap || [];
+  const sectorConcentration = data.sectorConcentration || [];
+
+  const getSeverityStyles = (severity) => {
+    switch (severity) {
+      case "high":
+        return {
+          background: "rgba(239, 68, 68, 0.1)",
+          border: "1px solid #ef4444",
+          dotColor: "#ef4444",
+          textColor: "#ef4444",
+          subTextColor: "#f87171",
+        };
+      case "moderate":
+        return {
+          background: "rgba(245, 158, 11, 0.1)",
+          border: "1px solid #f59e0b",
+          dotColor: "#f59e0b",
+          textColor: "#f59e0b",
+          subTextColor: "#fbbf24",
+        };
+      default:
+        return {
+          background: "rgba(34, 197, 94, 0.1)",
+          border: "1px solid #22c55e",
+          dotColor: "#22c55e",
+          textColor: "#22c55e",
+          subTextColor: "#4ade80",
+        };
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Overlap Visualization Placeholder */}
+      {/* Overlap Visualization */}
       <div
         className="rounded-xl p-6"
         style={{
@@ -725,23 +752,10 @@ const OverlapTab = () => {
         >
           Stock Overlap Analysis
         </h3>
-        <div
-          className="h-64 rounded-lg flex items-center justify-center"
-          style={{
-            background: "var(--bg-input)",
-            border: "2px dashed var(--border-medium)",
-          }}
-        >
-          <div className="text-center">
-            <span className="text-4xl">🔄</span>
-            <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
-              Overlap Visualization Placeholder
-            </p>
-            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
-              Venn diagram or matrix showing fund overlaps
-            </p>
-          </div>
-        </div>
+        <OverlapVisualization
+          stockOverlap={stockOverlap}
+          totalFunds={data.numberOfFunds}
+        />
       </div>
 
       {/* Explanation Card */}
@@ -783,67 +797,42 @@ const OverlapTab = () => {
           ⚡ Concentration Warnings
         </h3>
         <div className="space-y-3">
-          <div
-            className="flex items-start p-4 rounded-lg"
-            style={{
-              background: "rgba(239, 68, 68, 0.1)",
-              border: "1px solid #ef4444",
-            }}
-          >
-            <span className="mr-3" style={{ color: "#ef4444" }}>
-              ●
-            </span>
-            <div>
-              <p className="font-medium" style={{ color: "#ef4444" }}>
-                HDFC Bank - High Concentration
-              </p>
-              <p className="text-sm" style={{ color: "#f87171" }}>
-                Present in 5 out of 8 funds • Combined exposure: 12.5%
-              </p>
-            </div>
-          </div>
-          <div
-            className="flex items-start p-4 rounded-lg"
-            style={{
-              background: "rgba(245, 158, 11, 0.1)",
-              border: "1px solid #f59e0b",
-            }}
-          >
-            <span className="mr-3" style={{ color: "#f59e0b" }}>
-              ●
-            </span>
-            <div>
-              <p className="font-medium" style={{ color: "#f59e0b" }}>
-                Infosys - Moderate Concentration
-              </p>
-              <p className="text-sm" style={{ color: "#fbbf24" }}>
-                Present in 4 out of 8 funds • Combined exposure: 8.2%
-              </p>
-            </div>
-          </div>
-          <div
-            className="flex items-start p-4 rounded-lg"
-            style={{
-              background: "rgba(245, 158, 11, 0.1)",
-              border: "1px solid #f59e0b",
-            }}
-          >
-            <span className="mr-3" style={{ color: "#f59e0b" }}>
-              ●
-            </span>
-            <div>
-              <p className="font-medium" style={{ color: "#f59e0b" }}>
-                Reliance Industries - Moderate Concentration
-              </p>
-              <p className="text-sm" style={{ color: "#fbbf24" }}>
-                Present in 4 out of 8 funds • Combined exposure: 7.8%
-              </p>
-            </div>
-          </div>
+          {stockOverlap.map((item, index) => {
+            const styles = getSeverityStyles(item.severity);
+            return (
+              <div
+                key={index}
+                className="flex items-start p-4 rounded-lg"
+                style={{
+                  background: styles.background,
+                  border: styles.border,
+                }}
+              >
+                <span className="mr-3" style={{ color: styles.dotColor }}>
+                  ●
+                </span>
+                <div>
+                  <p
+                    className="font-medium"
+                    style={{ color: styles.textColor }}
+                  >
+                    {item.stock} -{" "}
+                    {item.severity.charAt(0).toUpperCase() +
+                      item.severity.slice(1)}{" "}
+                    Concentration
+                  </p>
+                  <p className="text-sm" style={{ color: styles.subTextColor }}>
+                    Present in {item.fundsHolding} out of {item.totalFunds}{" "}
+                    funds • Combined exposure: {item.combinedExposure}%
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Placeholder for additional visualization */}
+      {/* Sector Concentration Chart */}
       <div
         className="rounded-xl p-6"
         style={{
@@ -858,23 +847,7 @@ const OverlapTab = () => {
         >
           Sector Concentration
         </h3>
-        <div
-          className="h-48 rounded-lg flex items-center justify-center"
-          style={{
-            background: "var(--bg-input)",
-            border: "2px dashed var(--border-medium)",
-          }}
-        >
-          <div className="text-center">
-            <span className="text-4xl">📊</span>
-            <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
-              Sector Concentration Chart Placeholder
-            </p>
-            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
-              Bar chart showing sector-wise exposure
-            </p>
-          </div>
-        </div>
+        <SectorConcentrationChart data={sectorConcentration} />
       </div>
     </div>
   );

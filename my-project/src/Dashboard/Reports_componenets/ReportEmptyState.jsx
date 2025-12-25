@@ -1,15 +1,18 @@
 import { useNavigate } from "react-router-dom";
+import { usePortfolio } from "../../context/PortfolioContext";
 import { PlusCircle, FlaskConical } from "lucide-react";
 
 const ReportEmptyState = ({ icon: Icon, title, description }) => {
   const navigate = useNavigate();
+  const { loadSamplePortfolio } = usePortfolio();
 
   const handleAddPortfolio = () => {
     navigate("/dashboard/add-investment");
   };
 
   const handleSamplePortfolio = () => {
-    navigate("/dashboard/insights?isSample=true");
+    loadSamplePortfolio();
+    navigate("/insights");
   };
 
   return (

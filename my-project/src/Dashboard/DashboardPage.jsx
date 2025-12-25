@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PrivateLayout from "./PrivateLayout";
 import EmptyState from "../components/EmptyState";
+import { usePortfolio } from "../context/PortfolioContext";
 import { PlusCircle, FlaskConical } from "lucide-react";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-
-  // Simulated state - will be replaced with real data later
-  const [hasPortfolio, setHasPortfolio] = useState(false);
+  const { hasPortfolio, isSample, loadSamplePortfolio, clearPortfolio } =
+    usePortfolio();
 
   const handleAddPortfolio = () => {
     console.log("Add Portfolio clicked");
@@ -16,7 +16,8 @@ export default function DashboardPage() {
   };
 
   const handleSamplePortfolio = () => {
-    navigate("/dashboard/insights?isSample=true");
+    loadSamplePortfolio();
+    navigate("/insights");
   };
 
   return (
@@ -114,7 +115,7 @@ export default function DashboardPage() {
 
           {/* Temporary button to reset state */}
           <button
-            onClick={() => setHasPortfolio(false)}
+            onClick={clearPortfolio}
             className="mt-4 px-4 py-2 rounded-lg text-sm"
             style={{
               backgroundColor: "var(--bg-button-secondary)",

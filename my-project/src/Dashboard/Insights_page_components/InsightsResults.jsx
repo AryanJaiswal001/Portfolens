@@ -1,23 +1,69 @@
-import ThemeToggle from "../../components/ThemeToggle";
+import { usePortfolio } from "../../context/PortfolioContext";
+import { formatCurrency } from "../../data/samplePortfolio";
+import { FlaskConical } from "lucide-react";
+import {
+  PerformanceChart,
+  AllocationDonutChart,
+  OverlapVisualization,
+} from "../../components/charts";
 
 export default function InsightsResults() {
+  const { activePortfolio, hasPortfolio, isSample } = usePortfolio();
+
+  // Derive values from activePortfolio or use defaults
+  const totalInvested = activePortfolio?.totalInvested ?? 0;
+  const currentValue = activePortfolio?.currentValue ?? 0;
+  const percentageReturn = activePortfolio?.percentageReturn ?? 0;
+  const riskLevel = activePortfolio?.riskLevel ?? "—";
+  const diversificationScore = activePortfolio?.diversificationScore ?? 0;
+  const allocation = activePortfolio?.allocation ?? {
+    equity: 0,
+    debt: 0,
+    gold: 0,
+  };
+  const funds = activePortfolio?.funds ?? [];
+
+  // Chart data
+  const performanceHistory = activePortfolio?.performanceHistory ?? [];
+  const stockOverlap = activePortfolio?.stockOverlap ?? [];
+  const numberOfFunds = activePortfolio?.numberOfFunds ?? funds.length;
+
+  // Calculate overlap score (inverse of diversification for display)
+  const overlapScore = hasPortfolio ? 100 - diversificationScore : 0;
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex-1">
-            <h1
-              className="text-3xl font-bold mb-2"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Insights
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1
+                className="text-3xl font-bold mb-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Insights
+              </h1>
+              {/* Sample Data Badge */}
+              {isSample && (
+                <span
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(147, 51, 234, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%)",
+                    color: "var(--accent-purple)",
+                    border: "1px solid var(--accent-purple)",
+                  }}
+                >
+                  <FlaskConical className="w-3 h-3" />
+                  Sample Data
+                </span>
+              )}
+            </div>
             <p className="text-base" style={{ color: "var(--text-secondary)" }}>
               Understand how your portfolio behaves over time
             </p>
           </div>
-          
         </div>
       </div>
 
@@ -63,7 +109,7 @@ export default function InsightsResults() {
             className="text-3xl font-bold mb-1"
             style={{ color: "var(--text-primary)" }}
           >
-            —
+            {hasPortfolio ? formatCurrency(totalInvested) : "—"}
           </div>
           <div className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             Principal amount
@@ -109,9 +155,11 @@ export default function InsightsResults() {
             className="text-3xl font-bold mb-1"
             style={{ color: "var(--text-primary)" }}
           >
-            —
+            {hasPortfolio ? formatCurrency(currentValue) : "—"}
           </div>
-          <div className="text-sm font-medium text-green-500">+— % overall</div>
+          <div className="text-sm font-medium text-green-500">
+            {hasPortfolio ? `+${percentageReturn}% overall` : "+— % overall"}
+          </div>
         </div>
 
         {/* Risk Level */}
@@ -153,7 +201,7 @@ export default function InsightsResults() {
             className="text-3xl font-bold mb-1"
             style={{ color: "var(--text-primary)" }}
           >
-            —
+            {riskLevel}
           </div>
           <div className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             Based on allocation
@@ -206,7 +254,7 @@ export default function InsightsResults() {
             className="text-3xl font-bold mb-1"
             style={{ color: "var(--text-primary)" }}
           >
-            —
+            {hasPortfolio ? `${diversificationScore}%` : "—"}
           </div>
           <div className="text-sm" style={{ color: "var(--text-tertiary)" }}>
             Fund overlap analysis
@@ -254,45 +302,12 @@ export default function InsightsResults() {
           </div>
         </div>
 
-        {/* Chart Placeholder */}
-        <div
-          className="h-72 rounded-lg border-2 border-dashed flex items-center justify-center"
-          style={{
-            backgroundColor: "var(--bg-input)",
-            borderColor: "var(--border-medium)",
-          }}
-        >
-          <div className="text-center">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"
-              style={{ backgroundColor: "rgba(37, 99, 235, 0.15)" }}
-            >
-              <svg
-                className="w-8 h-8"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                style={{ color: "var(--accent-blue)" }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
-                />
-              </svg>
-            </div>
-            <p
-              className="text-sm font-medium mb-1"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Line chart will appear here
-            </p>
-            <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-              Investment vs Current Value over time
-            </p>
-          </div>
-        </div>
+        {/* Performance Chart */}
+        <PerformanceChart
+          data={performanceHistory}
+          height={288}
+          showLegend={true}
+        />
       </div>
 
       {/* Allocation & Overlap Section */}
@@ -319,77 +334,13 @@ export default function InsightsResults() {
             How your portfolio is distributed across asset classes
           </p>
 
-          {/* Donut Chart Placeholder */}
-          <div
-            className="h-52 rounded-lg border-2 border-dashed flex items-center justify-center mb-6"
-            style={{
-              backgroundColor: "var(--bg-input)",
-              borderColor: "var(--border-medium)",
-            }}
-          >
-            <div className="text-center">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"
-                style={{ backgroundColor: "rgba(147, 51, 234, 0.15)" }}
-              >
-                <svg
-                  className="w-8 h-8"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  style={{ color: "var(--accent-purple)" }}
-                >
-                  <circle cx="12" cy="12" r="10" strokeWidth={2} />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 2v10l7 4"
-                  />
-                </svg>
-              </div>
-              <p
-                className="text-sm font-medium"
-                style={{ color: "var(--text-primary)" }}
-              >
-                Donut chart
-              </p>
-            </div>
-          </div>
-
-          {/* Legend */}
-          <div className="space-y-3">
-            {[
-              { label: "Equity", color: "#3b82f6" },
-              { label: "Debt", color: "#22c55e" },
-              { label: "Gold", color: "#eab308" },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center justify-between p-3 rounded-lg"
-                style={{ backgroundColor: "var(--bg-input)" }}
-              >
-                <div className="flex items-center">
-                  <div
-                    className="w-4 h-4 rounded-full mr-3"
-                    style={{ backgroundColor: item.color }}
-                  ></div>
-                  <span
-                    className="text-sm font-medium"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {item.label}
-                  </span>
-                </div>
-                <span
-                  className="text-sm font-bold"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  —%
-                </span>
-              </div>
-            ))}
-          </div>
+          {/* Donut Chart */}
+          <AllocationDonutChart
+            data={allocation}
+            size={200}
+            strokeWidth={35}
+            showLegend={true}
+          />
         </div>
 
         {/* Fund Overlap */}
@@ -414,45 +365,19 @@ export default function InsightsResults() {
             Checks if your funds hold similar stocks (diversification check)
           </p>
 
-          {/* Overlap Visualization Placeholder */}
-          <div
-            className="h-52 rounded-lg border-2 border-dashed flex items-center justify-center mb-6"
-            style={{
-              backgroundColor: "var(--bg-input)",
-              borderColor: "var(--border-medium)",
-            }}
-          >
-            <div className="text-center">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"
-                style={{ backgroundColor: "rgba(99, 102, 241, 0.15)" }}
-              >
-                <svg
-                  className="w-8 h-8 text-indigo-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <circle cx="9" cy="12" r="7" strokeWidth={2} />
-                  <circle cx="15" cy="12" r="7" strokeWidth={2} />
-                </svg>
-              </div>
-              <p
-                className="text-sm font-medium"
-                style={{ color: "var(--text-primary)" }}
-              >
-                Overlap visualization
-              </p>
-            </div>
-          </div>
+          {/* Overlap Visualization */}
+          <OverlapVisualization
+            stockOverlap={stockOverlap}
+            totalFunds={numberOfFunds}
+          />
 
           {/* Overlap Insight */}
           <div
-            className="rounded-lg p-4"
+            className="rounded-lg p-4 mt-4"
             style={{ background: "var(--bg-button-primary)" }}
           >
             <p className="text-sm font-bold text-white mb-1">
-              Overlap Score: —%
+              Overlap Score: {hasPortfolio ? `${overlapScore}%` : "—%"}
             </p>
             <p className="text-xs text-white/80">
               Lower is better. High overlap means your funds hold similar
@@ -483,145 +408,229 @@ export default function InsightsResults() {
 
         {/* Fund Cards */}
         <div className="space-y-4">
-          {/* Fund 1 Placeholder */}
-          <div
-            className="rounded-lg p-5 transition-all hover:shadow-md"
-            style={{
-              backgroundColor: "var(--bg-input)",
-              border: "1px solid var(--border-subtle)",
-            }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3
-                  className="font-semibold text-base"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Fund Name
-                </h3>
-                <p
-                  className="text-sm mt-0.5"
-                  style={{ color: "var(--text-tertiary)" }}
-                >
-                  Large Cap Equity
-                </p>
-              </div>
-              <div className="text-right">
+          {hasPortfolio && funds.length > 0 ? (
+            // Render actual fund data
+            <>
+              {funds.slice(0, 4).map((fund) => (
                 <div
-                  className="text-xl font-bold"
-                  style={{ color: "var(--text-primary)" }}
+                  key={fund.id}
+                  className="rounded-lg p-5 transition-all hover:shadow-md"
+                  style={{
+                    backgroundColor: "var(--bg-input)",
+                    border: "1px solid var(--border-subtle)",
+                  }}
                 >
-                  —%
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3
+                        className="font-semibold text-base"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {fund.name}
+                      </h3>
+                      <p
+                        className="text-sm mt-0.5"
+                        style={{ color: "var(--text-tertiary)" }}
+                      >
+                        {fund.category}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div
+                        className="text-xl font-bold"
+                        style={{
+                          color: fund.returns >= 0 ? "#22c55e" : "#ef4444",
+                        }}
+                      >
+                        {fund.returns >= 0 ? "+" : ""}
+                        {fund.returns}%
+                      </div>
+                      <div
+                        className="text-xs mt-0.5"
+                        style={{ color: "var(--text-tertiary)" }}
+                      >
+                        Returns
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className="h-2.5 rounded-full overflow-hidden"
+                    style={{ backgroundColor: "var(--border-subtle)" }}
+                  >
+                    <div
+                      className="h-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(fund.returns * 3, 100)}%`,
+                        background:
+                          fund.returns >= 15
+                            ? "linear-gradient(to right, #22c55e, #16a34a)"
+                            : "linear-gradient(to right, #3b82f6, #2563eb)",
+                      }}
+                    ></div>
+                  </div>
                 </div>
+              ))}
+              {funds.length > 4 && (
                 <div
-                  className="text-xs mt-0.5"
-                  style={{ color: "var(--text-tertiary)" }}
+                  className="text-center py-4 rounded-lg"
+                  style={{ backgroundColor: "var(--bg-input)" }}
                 >
-                  Returns
+                  <p
+                    className="text-sm"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    +{funds.length - 4} more funds in your portfolio
+                  </p>
                 </div>
-              </div>
-            </div>
-            <div
-              className="h-2.5 rounded-full overflow-hidden"
-              style={{ backgroundColor: "var(--border-subtle)" }}
-            >
+              )}
+            </>
+          ) : (
+            // Empty state placeholders
+            <>
+              {/* Fund 1 Placeholder */}
               <div
-                className="h-full w-0"
+                className="rounded-lg p-5 transition-all hover:shadow-md"
                 style={{
-                  background: "linear-gradient(to right, #22c55e, #16a34a)",
+                  backgroundColor: "var(--bg-input)",
+                  border: "1px solid var(--border-subtle)",
                 }}
-              ></div>
-            </div>
-          </div>
-
-          {/* Fund 2 Placeholder */}
-          <div
-            className="rounded-lg p-5 transition-all hover:shadow-md"
-            style={{
-              backgroundColor: "var(--bg-input)",
-              border: "1px solid var(--border-subtle)",
-            }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3
-                  className="font-semibold text-base"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Fund Name
-                </h3>
-                <p
-                  className="text-sm mt-0.5"
-                  style={{ color: "var(--text-tertiary)" }}
-                >
-                  Debt Fund
-                </p>
-              </div>
-              <div className="text-right">
-                <div
-                  className="text-xl font-bold"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  —%
-                </div>
-                <div
-                  className="text-xs mt-0.5"
-                  style={{ color: "var(--text-tertiary)" }}
-                >
-                  Returns
-                </div>
-              </div>
-            </div>
-            <div
-              className="h-2.5 rounded-full overflow-hidden"
-              style={{ backgroundColor: "var(--border-subtle)" }}
-            >
-              <div
-                className="h-full w-0"
-                style={{
-                  background: "linear-gradient(to right, #3b82f6, #2563eb)",
-                }}
-              ></div>
-            </div>
-          </div>
-
-          {/* Empty State */}
-          <div
-            className="text-center py-12 border-2 border-dashed rounded-lg"
-            style={{
-              backgroundColor: "var(--bg-input)",
-              borderColor: "var(--border-medium)",
-            }}
-          >
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"
-              style={{ backgroundColor: "var(--border-subtle)" }}
-            >
-              <svg
-                className="w-8 h-8"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                style={{ color: "var(--text-tertiary)" }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-            </div>
-            <p
-              className="text-sm font-medium mb-1"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              Add more funds to see detailed performance
-            </p>
-            <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-              More funds will appear here as you add them
-            </p>
-          </div>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3
+                      className="font-semibold text-base"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      Fund Name
+                    </h3>
+                    <p
+                      className="text-sm mt-0.5"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      Large Cap Equity
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div
+                      className="text-xl font-bold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      —%
+                    </div>
+                    <div
+                      className="text-xs mt-0.5"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      Returns
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className="h-2.5 rounded-full overflow-hidden"
+                  style={{ backgroundColor: "var(--border-subtle)" }}
+                >
+                  <div
+                    className="h-full w-0"
+                    style={{
+                      background: "linear-gradient(to right, #22c55e, #16a34a)",
+                    }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Fund 2 Placeholder */}
+              <div
+                className="rounded-lg p-5 transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: "var(--bg-input)",
+                  border: "1px solid var(--border-subtle)",
+                }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3
+                      className="font-semibold text-base"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      Fund Name
+                    </h3>
+                    <p
+                      className="text-sm mt-0.5"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      Debt Fund
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div
+                      className="text-xl font-bold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      —%
+                    </div>
+                    <div
+                      className="text-xs mt-0.5"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      Returns
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className="h-2.5 rounded-full overflow-hidden"
+                  style={{ backgroundColor: "var(--border-subtle)" }}
+                >
+                  <div
+                    className="h-full w-0"
+                    style={{
+                      background: "linear-gradient(to right, #3b82f6, #2563eb)",
+                    }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Empty State */}
+              <div
+                className="text-center py-12 border-2 border-dashed rounded-lg"
+                style={{
+                  backgroundColor: "var(--bg-input)",
+                  borderColor: "var(--border-medium)",
+                }}
+              >
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"
+                  style={{ backgroundColor: "var(--border-subtle)" }}
+                >
+                  <svg
+                    className="w-8 h-8"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    />
+                  </svg>
+                </div>
+                <p
+                  className="text-sm font-medium mb-1"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Add more funds to see detailed performance
+                </p>
+                <p
+                  className="text-xs"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  More funds will appear here as you add them
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
