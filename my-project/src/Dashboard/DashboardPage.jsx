@@ -113,18 +113,7 @@ export default function DashboardPage() {
             Add More Investments
           </button>
 
-          {/* Temporary button to reset state */}
-          <button
-            onClick={clearPortfolio}
-            className="mt-4 px-4 py-2 rounded-lg text-sm"
-            style={{
-              backgroundColor: "var(--bg-button-secondary)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--border-medium)",
-            }}
-          >
-            Reset to Empty State (Dev Only)
-          </button>
+          
         </div>
       )}
     </PrivateLayout>

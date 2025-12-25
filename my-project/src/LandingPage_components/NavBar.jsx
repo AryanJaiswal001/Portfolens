@@ -28,30 +28,7 @@ export default function Navbar() {
           </span>
         </div>
 
-        {/* Navigation Links */}
-        <div className="hidden md:flex items-center space-x-8">
-          <a
-            href="#features"
-            className="font-medium hover:opacity-70 transition"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            Features
-          </a>
-          <a
-            href="#pricing"
-            className="font-medium hover:opacity-70 transition"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            Pricing
-          </a>
-          <a
-            href="#about"
-            className="font-medium hover:opacity-70 transition"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            About
-          </a>
-        </div>
+        
 
         {/* Right Side: Theme Toggle + Auth Buttons */}
         <div className="flex items-center space-x-4">
