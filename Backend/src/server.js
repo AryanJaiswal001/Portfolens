@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import app from './app.js';
+import connectDB from './config/db.js'
 
 // Configuration
 const PORT = process.env.PORT || 5000;
@@ -16,9 +17,10 @@ process.on('uncaughtException', (err) => {
 // Start server
 const startServer = async () => {
   try {
-    // TODO: Connect to MongoDB when ready
-    // import connectDB from './config/db.js';
-    // await connectDB();
+      //Step 1: Connect to DB
+      console.log('Connecting to MongoDB...');
+      await connectDB();
+      
 
     const server = app.listen(PORT, () => {
       console.log('\n========================================');
