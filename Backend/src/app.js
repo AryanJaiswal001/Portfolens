@@ -4,7 +4,9 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 //Import health routes
-import healthRoutes from './routes/health.js'
+import healthRoutes from './routes/health.js';
+import authRoutes from './routes/authroutes.js';
+
 
 // Initialize Express app
 const app = express();
@@ -45,6 +47,9 @@ app.use(express.urlencoded({ extended: true }));
 
 //Health check route
 app.use('/api/health',healthRoutes);
+
+//Authentication
+app.use('/api/auth',authRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
