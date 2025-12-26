@@ -3,6 +3,9 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 
+//Import health routes
+import healthRoutes from './routes/health.js'
+
 // Initialize Express app
 const app = express();
 
@@ -39,6 +42,9 @@ app.use(express.urlencoded({ extended: true }));
 // ===================
 // ROUTES
 // ===================
+
+//Health check route
+app.use('/api/health',healthRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
