@@ -9,7 +9,7 @@ import healthRoutes from "./routes/health.js";
 import authRoutes from "./routes/authroutes.js";
 
 // Import OAuth strategy
-import configureGoogleStrategy from "./config/passport.js";
+import configureGoogleStrategy from "./utils/OAuth.js";
 
 // Initialize Express app
 const app = express();

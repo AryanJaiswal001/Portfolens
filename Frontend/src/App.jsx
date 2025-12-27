@@ -11,6 +11,7 @@ import PortfolioPage from "./Dashboard/PortfolioPage";
 import InsightsPage from "./Dashboard/InsightsPage";
 import ReportsPage from "./Dashboard/ReportsPage";
 import SettingsPage from "./Dashboard/Settings";
+import OAuthCallback from "./pages/OAuthCallBack";
 
 // Import Dashboard Inner Components
 import SelectMethod from "./Dashboard/Dashboard_inner_components/SelectMethod";
@@ -30,6 +31,7 @@ function App() {
           <Route path="/signup" element={<RegisterUser />} />
           <Route path="/onboarding" element={<ChoiceScreen />} />
           <Route path="/survey" element={<Survey />} />
+          <Route path='/oauth/callback' element={<OAuthCallback/>}/>
 
           {/* Private Routes - Main Dashboard */}
           <Route path="/dashboard" element={<DashboardPage />} />
