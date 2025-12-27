@@ -2,11 +2,14 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import passport from "passport";
 
-//Import health routes
-import healthRoutes from './routes/health.js';
-import authRoutes from './routes/authroutes.js';
+// Import routes
+import healthRoutes from "./routes/health.js";
+import authRoutes from "./routes/authroutes.js";
 
+// Import OAuth strategy
+import configureGoogleStrategy from "./config/passport.js";
 
 // Initialize Express app
 const app = express();
@@ -16,13 +19,11 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
 
 // ===================
-// MIDDLEWARE
+// SECURITY MIDDLEWARE
 // ===================
 
-// Security headers
 app.use(helmet());
 
-// CORS configuration
 app.use(
   cors({
     origin: CORS_ORIGIN,
@@ -32,34 +33,36 @@ app.use(
   })
 );
 
-// Request logging (development only)
+// ===================
+// UTILITY MIDDLEWARE
+// ===================
+
 if (NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-// Body parsing
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // ===================
-// ROUTES
+// PASSPORT SETUP
 // ===================
 
-//Health check route
-app.use('/api/health',healthRoutes);
+// Initialize Passport
+app.use(passport.initialize());
 
-//Authentication
-app.use('/api/auth',authRoutes);
+// Configure Google OAuth strategy
+configureGoogleStrategy();
 
-// Health check endpoint
-app.get("/api/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "PortfoLens API is running",
-    environment: NODE_ENV,
-    timestamp: new Date().toISOString(),
-  });
-});
+// ===================
+// API ROUTES
+// ===================
+
+// Health check route
+app.use("/api/health", healthRoutes);
+
+// Authentication (includes OAuth)
+app.use("/api/auth", authRoutes);
 
 // Test endpoint
 app.get("/api/test", (req, res) => {
@@ -73,17 +76,11 @@ app.get("/api/test", (req, res) => {
   });
 });
 
-// TODO: Import and use routes when ready
-// import authRoutes from './routes/auth.routes.js';
-// import portfolioRoutes from './routes/portfolio.routes.js';
-// app.use('/api/auth', authRoutes);
-// app.use('/api/portfolio', portfolioRoutes);
-
 // ===================
 // ERROR HANDLING
 // ===================
 
-// 404 handler - Route not found
+// 404 handler
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
