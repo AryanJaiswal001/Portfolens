@@ -1,6 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import PrivateLayout from "./PrivateLayout";
-import { Settings as SettingsIcon, LogOut, User, Shield, Bell } from "lucide-react";
+import {
+  Settings as SettingsIcon,
+  LogOut,
+  User,
+  Shield,
+  Bell,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export default function SettingsPage() {
@@ -60,7 +66,7 @@ export default function SettingsPage() {
           >
             Preferences
           </h3>
-          
+
           <div className="space-y-3">
             <button
               className="w-full flex items-center gap-3 p-4 rounded-xl transition-all hover:opacity-80"
@@ -69,10 +75,13 @@ export default function SettingsPage() {
                 border: "1px solid var(--border-subtle)",
               }}
             >
-              <User className="w-5 h-5" style={{ color: "var(--accent-purple)" }} />
+              <User
+                className="w-5 h-5"
+                style={{ color: "var(--accent-purple)" }}
+              />
               <span style={{ color: "var(--text-primary)" }}>Edit Profile</span>
             </button>
-            
+
             <button
               className="w-full flex items-center gap-3 p-4 rounded-xl transition-all hover:opacity-80"
               style={{
@@ -80,10 +89,13 @@ export default function SettingsPage() {
                 border: "1px solid var(--border-subtle)",
               }}
             >
-              <Shield className="w-5 h-5" style={{ color: "var(--accent-purple)" }} />
+              <Shield
+                className="w-5 h-5"
+                style={{ color: "var(--accent-purple)" }}
+              />
               <span style={{ color: "var(--text-primary)" }}>Security</span>
             </button>
-            
+
             <button
               className="w-full flex items-center gap-3 p-4 rounded-xl transition-all hover:opacity-80"
               style={{
@@ -91,8 +103,13 @@ export default function SettingsPage() {
                 border: "1px solid var(--border-subtle)",
               }}
             >
-              <Bell className="w-5 h-5" style={{ color: "var(--accent-purple)" }} />
-              <span style={{ color: "var(--text-primary)" }}>Notifications</span>
+              <Bell
+                className="w-5 h-5"
+                style={{ color: "var(--accent-purple)" }}
+              />
+              <span style={{ color: "var(--text-primary)" }}>
+                Notifications
+              </span>
             </button>
           </div>
         </div>
@@ -112,7 +129,7 @@ export default function SettingsPage() {
           >
             Account
           </h3>
-          
+
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-3 p-4 rounded-xl font-semibold transition-all hover:opacity-90"
