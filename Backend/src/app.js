@@ -7,6 +7,7 @@ import passport from "passport";
 // Import routes
 import healthRoutes from "./routes/health.js";
 import authRoutes from "./routes/authroutes.js";
+import portfolioRoutes from "./routes/portfolioRoutes.js";
 
 // Import OAuth strategy
 import configureGoogleStrategy from "./utils/OAuth.js";
@@ -48,21 +49,21 @@ app.use(express.urlencoded({ extended: true }));
 // PASSPORT SETUP
 // ===================
 
-// Initialize Passport
 app.use(passport.initialize());
-
-// Configure Google OAuth strategy
 configureGoogleStrategy();
 
 // ===================
 // API ROUTES
 // ===================
 
-// Health check route
+// Health check
 app.use("/api/health", healthRoutes);
 
-// Authentication (includes OAuth)
+// Authentication
 app.use("/api/auth", authRoutes);
+
+// Portfolio management
+app.use("/api/portfolio", portfolioRoutes);
 
 // Test endpoint
 app.get("/api/test", (req, res) => {
