@@ -130,6 +130,16 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Edit Portfolio */}
+            <Route
+              path="/dashboard/edit-portfolio/:id"
+              element={
+                <ProtectedRoute>
+                  <ManualEntryPage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </PortfolioProvider>
       </AuthProvider>
