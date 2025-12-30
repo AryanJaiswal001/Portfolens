@@ -6,7 +6,17 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "seed:funds": "node src/scripts/seedFundReferences.js",
+    "seed:funds:clear": "node src/scripts/seedFundReferences.js --clear",
+    "seed:templates": "node src/scripts/seedHoldingTemplates.js",
+    "seed:templates:clear": "node src/scripts/seedHoldingTemplates.js --clear",
+    "migrate:fund-templates": "node src/scripts/migrateFundTemplateLinks.js",
+    "validate:fund-templates": "node src/scripts/validateFundTemplateMapping.js",
+    "seed:nav": "node src/scripts/seedFundNav.js",
+    "seed:nav:all": "node src/scripts/seedFundNav.js --all",
+    "seed:nav:clean": "node src/scripts/seedFundNav.js --clean --all",
+    "seed:all": "npm run seed:funds && npm run seed:templates && npm run migrate:fund-templates && npm run seed:nav:all && npm run validate:fund-templates"
   },
   "keywords": [
     "portfolio",

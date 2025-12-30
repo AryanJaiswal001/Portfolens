@@ -7,7 +7,8 @@ import passport from "passport";
 // Import routes
 import healthRoutes from "./routes/health.js";
 import authRoutes from "./routes/authroutes.js";
-import portfolioRoutes from "./routes/portfolioRoutes.js";
+import portfolioRoutes from "./routes/portfolio.routes.js";
+import fundReferenceRoutes from "./routes/fundReference.routes.js";
 
 // Import OAuth strategy
 import configureGoogleStrategy from "./utils/OAuth.js";
@@ -64,6 +65,9 @@ app.use("/api/auth", authRoutes);
 
 // Portfolio management
 app.use("/api/portfolio", portfolioRoutes);
+
+// Fund reference data (read-only)
+app.use("/api/funds", fundReferenceRoutes);
 
 // Test endpoint
 app.get("/api/test", (req, res) => {
