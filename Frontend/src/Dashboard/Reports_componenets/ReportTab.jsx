@@ -226,7 +226,8 @@ const ReportTab = () => {
   // ═══════════════════════════════════════════════════════════════
   const reportData = reports || {};
   const performanceSummary = performance?.summary || {};
-  const fundPerformance = performance?.funds || [];
+  const fundPerformance =
+    performance?.fundPerformance || performance?.funds || [];
   const assetAllocation = diversification?.assetAllocation || {};
   const categoryDistribution = diversification?.categoryDistribution || {};
   const marketCapExposure = diversification?.marketCapExposure || {};
