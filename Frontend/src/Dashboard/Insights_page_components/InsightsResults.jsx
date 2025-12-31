@@ -490,6 +490,7 @@ export default function InsightsResults() {
             size={200}
             strokeWidth={35}
             showLegend={true}
+            totalInvested={performanceSummary?.totalInvested || null}
           />
         </div>
 

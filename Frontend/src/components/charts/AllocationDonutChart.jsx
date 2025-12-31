@@ -21,31 +21,38 @@ const AllocationDonutChart = ({
   }, []);
 
   const chartData = useMemo(() => {
+    // Fixed color palette for asset classes (matches fintech standards)
+    // Keys are lowercase for consistent matching
     const colorConfigs = {
       equity: {
-        primary: "#3b82f6",
-        gradient: "#60a5fa",
-        glow: "rgba(59, 130, 246, 0.3)",
+        primary: "#6366F1", // Indigo/Purple-Blue
+        gradient: "#818CF8",
+        glow: "rgba(99, 102, 241, 0.3)",
       },
       debt: {
-        primary: "#22c55e",
-        gradient: "#4ade80",
-        glow: "rgba(34, 197, 94, 0.3)",
+        primary: "#10B981", // Teal/Green
+        gradient: "#34D399",
+        glow: "rgba(16, 185, 129, 0.3)",
+      },
+      hybrid: {
+        primary: "#F59E0B", // Amber
+        gradient: "#FBBF24",
+        glow: "rgba(245, 158, 11, 0.3)",
       },
       gold: {
-        primary: "#eab308",
-        gradient: "#facc15",
-        glow: "rgba(234, 179, 8, 0.3)",
+        primary: "#FACC15", // Gold/Yellow
+        gradient: "#FDE047",
+        glow: "rgba(250, 204, 21, 0.3)",
       },
       cash: {
-        primary: "#8b5cf6",
-        gradient: "#a78bfa",
-        glow: "rgba(139, 92, 246, 0.3)",
+        primary: "#9CA3AF", // Gray
+        gradient: "#D1D5DB",
+        glow: "rgba(156, 163, 175, 0.3)",
       },
       other: {
-        primary: "#6b7280",
-        gradient: "#9ca3af",
-        glow: "rgba(107, 114, 128, 0.3)",
+        primary: "#9CA3AF", // Gray
+        gradient: "#D1D5DB",
+        glow: "rgba(156, 163, 175, 0.3)",
       },
     };
 
@@ -57,9 +64,12 @@ const AllocationDonutChart = ({
     const segments = entries.map(([key, value]) => {
       const startPercent = cumulativePercent;
       cumulativePercent += value;
-      const colors = colorConfigs[key] || colorConfigs.other;
+      // Normalize key to lowercase for color lookup (backend sends "Equity", "Debt", etc.)
+      const normalizedKey = key.toLowerCase();
+      const colors = colorConfigs[normalizedKey] || colorConfigs.other;
       return {
         key,
+        normalizedKey,
         value,
         ...colors,
         startPercent,
@@ -122,28 +132,55 @@ const AllocationDonutChart = ({
         }}
       >
         <svg width={size} height={size} className="transform -rotate-90">
-          {/* Define gradients */}
+          {/* Define gradients - both linear and radial for single asset */}
           <defs>
             {chartData.map((segment) => (
-              <linearGradient
-                key={`gradient-${segment.key}`}
-                id={`gradient-${segment.key}`}
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="100%"
-              >
-                <stop offset="0%" stopColor={segment.gradient} />
-                <stop offset="100%" stopColor={segment.primary} />
-              </linearGradient>
+              <React.Fragment key={`gradients-${segment.key}`}>
+                {/* Linear gradient for multi-asset */}
+                <linearGradient
+                  id={`gradient-${segment.key}`}
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor={segment.gradient} />
+                  <stop offset="100%" stopColor={segment.primary} />
+                </linearGradient>
+                {/* Radial gradient for single asset - adds depth */}
+                <radialGradient
+                  id={`radial-${segment.key}`}
+                  cx="30%"
+                  cy="30%"
+                  r="70%"
+                >
+                  <stop offset="0%" stopColor={segment.gradient} />
+                  <stop offset="50%" stopColor={segment.primary} />
+                  <stop
+                    offset="100%"
+                    stopColor={segment.primary}
+                    stopOpacity="0.8"
+                  />
+                </radialGradient>
+              </React.Fragment>
             ))}
-            {/* Glow filter */}
+            {/* Glow filter for hover */}
             <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="3" result="coloredBlur" />
               <feMerge>
                 <feMergeNode in="coloredBlur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
+            </filter>
+            {/* Drop shadow filter */}
+            <filter
+              id="dropShadow"
+              x="-20%"
+              y="-20%"
+              width="140%"
+              height="140%"
+            >
+              <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.3" />
             </filter>
           </defs>
 
@@ -155,7 +192,7 @@ const AllocationDonutChart = ({
             fill="none"
             stroke="var(--border-subtle)"
             strokeWidth={strokeWidth}
-            opacity={0.3}
+            opacity={0.2}
           />
 
           {/* Colored segments with gradients */}
@@ -163,7 +200,12 @@ const AllocationDonutChart = ({
             const dashLength = (segment.value / 100) * circumference;
             const dashOffset =
               circumference - (segment.startPercent / 100) * circumference;
+            const isSingleAsset = chartData.length === 1;
             const isHovered = hoveredSegment === segment.key;
+            // Use radial gradient for single asset to avoid flat look
+            const strokeGradient = isSingleAsset
+              ? `url(#radial-${segment.key})`
+              : `url(#gradient-${segment.key})`;
 
             return (
               <circle
@@ -172,8 +214,8 @@ const AllocationDonutChart = ({
                 cy={center}
                 r={radius}
                 fill="none"
-                stroke={`url(#gradient-${segment.key})`}
-                strokeWidth={isHovered ? strokeWidth + 4 : strokeWidth}
+                stroke={strokeGradient}
+                strokeWidth={isHovered ? strokeWidth + 6 : strokeWidth}
                 strokeDasharray={
                   isAnimated
                     ? `${dashLength} ${circumference - dashLength}`
@@ -181,7 +223,7 @@ const AllocationDonutChart = ({
                 }
                 strokeDashoffset={dashOffset}
                 strokeLinecap="round"
-                filter={isHovered ? "url(#glow)" : undefined}
+                filter={isHovered ? "url(#glow)" : "url(#dropShadow)"}
                 style={{
                   cursor: "pointer",
                   transition:
@@ -232,47 +274,54 @@ const AllocationDonutChart = ({
           )}
         </div>
 
-        {/* Hover Tooltip */}
+        {/* Hover Tooltip - Dark mode optimized */}
         {hoveredSegment && (
           <div
-            className="absolute z-50 px-3 py-2 rounded-lg shadow-lg pointer-events-none"
+            className="absolute z-50 px-4 py-3 rounded-xl shadow-2xl pointer-events-none"
             style={{
-              backgroundColor: "var(--bg-card)",
-              border: "1px solid var(--border-medium)",
+              backgroundColor: "rgba(17, 24, 39, 0.95)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -140%)",
-              minWidth: "120px",
+              minWidth: "140px",
             }}
           >
             {chartData
               .filter((s) => s.key === hoveredSegment)
               .map((segment) => (
                 <div key={segment.key} className="text-center">
-                  <div className="flex items-center justify-center gap-2 mb-1">
+                  {/* Tooltip header with color indicator */}
+                  <div className="flex items-center justify-center gap-2 mb-2">
                     <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: segment.primary }}
+                      className="w-3 h-3 rounded-full"
+                      style={{
+                        backgroundColor: segment.primary,
+                        boxShadow: `0 0 8px ${segment.primary}`,
+                      }}
                     />
                     <span
-                      className="text-sm font-semibold"
-                      style={{ color: "var(--text-primary)" }}
+                      className="text-sm font-bold"
+                      style={{ color: "#F9FAFB" }}
                     >
                       {segment.label}
                     </span>
                   </div>
+                  {/* Percentage - large and prominent */}
                   <div
-                    className="text-lg font-bold"
+                    className="text-2xl font-bold mb-1"
                     style={{ color: segment.primary }}
                   >
                     {segment.value}%
                   </div>
+                  {/* Amount invested */}
                   {segment.amount !== null && (
                     <div
-                      className="text-xs"
-                      style={{ color: "var(--text-secondary)" }}
+                      className="text-xs font-medium"
+                      style={{ color: "#9CA3AF" }}
                     >
-                      {formatCurrency(segment.amount)}
+                      {formatCurrency(segment.amount)} invested
                     </div>
                   )}
                 </div>
