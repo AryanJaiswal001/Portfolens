@@ -18,6 +18,7 @@ import {
 import {
   AllocationDonutChart,
   SectorConcentrationChart,
+  InvestmentGrowthChart,
 } from "../../components/charts";
 
 /**
@@ -228,6 +229,7 @@ const ReportTab = () => {
   const performanceSummary = performance?.summary || {};
   const fundPerformance =
     performance?.fundPerformance || performance?.funds || [];
+  const cashflows = performance?.cashflows || [];
   const assetAllocation = diversification?.assetAllocation || {};
   const categoryDistribution = diversification?.categoryDistribution || {};
   const marketCapExposure = diversification?.marketCapExposure || {};
@@ -251,6 +253,7 @@ const ReportTab = () => {
             performanceSummary={performanceSummary}
             fundPerformance={fundPerformance}
             reportData={reportData}
+            cashflows={cashflows}
           />
         );
       case "allocation":
@@ -735,6 +738,7 @@ const PerformanceTab = ({
   performanceSummary,
   fundPerformance,
   reportData,
+  cashflows = [],
 }) => {
   const performanceReport = reportData.performanceReport || {};
 
@@ -809,6 +813,15 @@ const PerformanceTab = ({
           </p>
         </div>
       </div>
+
+      {/* Investment Growth Chart */}
+      <InvestmentGrowthChart
+        cashflows={cashflows}
+        fundPerformance={fundPerformance}
+        totalInvested={performanceSummary.totalInvested || 0}
+        currentValue={performanceSummary.currentValue || 0}
+        height={320}
+      />
 
       {/* Fund-wise Performance */}
       <div

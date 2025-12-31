@@ -281,7 +281,7 @@ const AllocationDonutChart = ({
         )}
       </div>
 
-      {/* Enhanced Legend */}
+      {/* Enhanced Legend with ₹ Amounts */}
       {showLegend && (
         <div
           className="mt-4 grid grid-cols-2 gap-3 w-full"
@@ -296,7 +296,7 @@ const AllocationDonutChart = ({
             return (
               <div
                 key={segment.key}
-                className="flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all duration-200"
+                className="flex flex-col p-3 rounded-lg cursor-pointer transition-all duration-200"
                 style={{
                   backgroundColor: isHovered ? segment.glow : "var(--bg-input)",
                   border: isHovered
@@ -307,29 +307,48 @@ const AllocationDonutChart = ({
                 onMouseEnter={() => setHoveredSegment(segment.key)}
                 onMouseLeave={() => setHoveredSegment(null)}
               >
-                <div className="flex items-center">
-                  <div
-                    className="w-3 h-3 rounded-full mr-2"
-                    style={{
-                      background: `linear-gradient(135deg, ${segment.gradient}, ${segment.primary})`,
-                      boxShadow: isHovered ? `0 0 8px ${segment.glow}` : "none",
-                    }}
-                  />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div
+                      className="w-3 h-3 rounded-full mr-2"
+                      style={{
+                        background: `linear-gradient(135deg, ${segment.gradient}, ${segment.primary})`,
+                        boxShadow: isHovered
+                          ? `0 0 8px ${segment.glow}`
+                          : "none",
+                      }}
+                    />
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {segment.label}
+                    </span>
+                  </div>
                   <span
-                    className="text-sm font-medium"
-                    style={{ color: "var(--text-primary)" }}
+                    className="text-sm font-bold"
+                    style={{
+                      color: isHovered
+                        ? segment.primary
+                        : "var(--text-primary)",
+                    }}
                   >
-                    {segment.label}
+                    {segment.value}%
                   </span>
                 </div>
-                <span
-                  className="text-sm font-bold"
-                  style={{
-                    color: isHovered ? segment.primary : "var(--text-primary)",
-                  }}
-                >
-                  {segment.value}%
-                </span>
+                {/* Amount row - only show if we have totalInvested */}
+                {segment.amount !== null && (
+                  <div
+                    className="mt-1.5 text-xs font-semibold pl-5"
+                    style={{
+                      color: isHovered
+                        ? segment.primary
+                        : "var(--text-secondary)",
+                    }}
+                  >
+                    {formatCurrency(segment.amount)}
+                  </div>
+                )}
               </div>
             );
           })}
