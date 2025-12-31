@@ -9,6 +9,34 @@ import Portfolio from "../models/portfolioModel.js";
  */
 
 /**
+ * Transform stored portfolio data to frontend-compatible format
+ * Used when sending data back for editing
+ */
+const transformForFrontend = (portfolio) => {
+  const transformed = portfolio.toObject ? portfolio.toObject() : { ...portfolio };
+  
+  transformed.funds = transformed.funds.map((fund) => {
+    // Get first SIP entry for backward compatibility
+    const firstSip = fund.sips && fund.sips.length > 0 ? fund.sips[0] : null;
+    
+    return {
+      ...fund,
+      // For backward compatibility with frontend
+      sip: firstSip ? firstSip.amount : null,
+      investmentStartYear: firstSip ? firstSip.startYear : new Date().getFullYear(),
+      // Transform lumpsums to frontend format
+      lumpsums: (fund.lumpsums || []).map((l) => ({
+        year: l.year,
+        amount: l.amount,
+        month: l.month,
+      })),
+    };
+  });
+  
+  return transformed;
+};
+
+/**
  * @desc    Create a new portfolio
  * @route   POST /api/portfolio
  * @access  Private
@@ -29,27 +57,64 @@ export const createPortfolio = async (req, res) => {
     // Validate each fund
     for (let i = 0; i < funds.length; i++) {
       const fund = funds[i];
-      if (!fund.assetType || !fund.assetName || !fund.investmentStartYear) {
+      if (!fund.assetType || !fund.assetName) {
         return res.status(400).json({
           success: false,
-          message: `Fund ${
-            i + 1
-          } is missing required fields (assetType, assetName, investmentStartYear)`,
+          message: `Fund ${i + 1} is missing required fields (assetType, assetName)`,
+        });
+      }
+      // Must have either SIP or lumpsum
+      const hasSip = fund.sip && parseFloat(fund.sip) > 0;
+      const hasLumpsum =
+        fund.lumpsums &&
+        fund.lumpsums.some((l) => l.amount && parseFloat(l.amount) > 0);
+      if (!hasSip && !hasLumpsum) {
+        return res.status(400).json({
+          success: false,
+          message: `Fund ${i + 1} must have either SIP or lumpsum investment`,
         });
       }
     }
+
+    // Transform frontend data to new schema format
+    const transformedFunds = funds.map((fund) => {
+      const transformed = {
+        assetType: fund.assetType,
+        assetName: fund.assetName,
+        sips: [],
+        lumpsums: [],
+      };
+
+      // Convert single SIP amount to sips array entry
+      if (fund.sip && parseFloat(fund.sip) > 0) {
+        const startYear = fund.investmentStartYear || new Date().getFullYear();
+        transformed.sips.push({
+          amount: parseFloat(fund.sip),
+          startMonth: 1, // Default to January
+          startYear: startYear,
+          isOngoing: true,
+        });
+      }
+
+      // Convert lumpsums (add month if missing)
+      if (fund.lumpsums && fund.lumpsums.length > 0) {
+        transformed.lumpsums = fund.lumpsums
+          .filter((l) => l.amount && parseFloat(l.amount) > 0)
+          .map((l) => ({
+            amount: parseFloat(l.amount),
+            month: l.month || 1, // Default to January if month not provided
+            year: parseInt(l.year),
+          }));
+      }
+
+      return transformed;
+    });
 
     // Create portfolio
     const portfolio = await Portfolio.create({
       userId,
       name: name || "My Portfolio",
-      funds: funds.map((fund) => ({
-        assetType: fund.assetType,
-        assetName: fund.assetName,
-        investmentStartYear: fund.investmentStartYear,
-        sip: fund.sip || null,
-        lumpsums: fund.lumpsums || [],
-      })),
+      funds: transformedFunds,
     });
 
     res.status(201).json({
@@ -91,11 +156,14 @@ export const getPortfolios = async (req, res) => {
       .sort({ createdAt: -1 }) // Latest first
       .lean();
 
+    // Transform each portfolio for frontend compatibility
+    const transformedPortfolios = portfolios.map((p) => transformForFrontend(p));
+
     res.status(200).json({
       success: true,
       count: portfolios.length,
       data: {
-        portfolios,
+        portfolios: transformedPortfolios,
       },
     });
   } catch (error) {
@@ -129,10 +197,13 @@ export const getPortfolioById = async (req, res) => {
       });
     }
 
+    // Transform to frontend-compatible format for editing
+    const transformedPortfolio = transformForFrontend(portfolio);
+
     res.status(200).json({
       success: true,
       data: {
-        portfolio,
+        portfolio: transformedPortfolio,
       },
     });
   } catch (error) {
@@ -180,13 +251,39 @@ export const updatePortfolio = async (req, res) => {
     // Update fields
     if (name) portfolio.name = name;
     if (funds && Array.isArray(funds) && funds.length > 0) {
-      portfolio.funds = funds.map((fund) => ({
-        assetType: fund.assetType,
-        assetName: fund.assetName,
-        investmentStartYear: fund.investmentStartYear,
-        sip: fund.sip || null,
-        lumpsums: fund.lumpsums || [],
-      }));
+      // Transform frontend data to new schema format
+      portfolio.funds = funds.map((fund) => {
+        const transformed = {
+          assetType: fund.assetType,
+          assetName: fund.assetName,
+          sips: [],
+          lumpsums: [],
+        };
+
+        // Convert single SIP amount to sips array entry
+        if (fund.sip && parseFloat(fund.sip) > 0) {
+          const startYear = fund.investmentStartYear || new Date().getFullYear();
+          transformed.sips.push({
+            amount: parseFloat(fund.sip),
+            startMonth: 1, // Default to January
+            startYear: startYear,
+            isOngoing: true,
+          });
+        }
+
+        // Convert lumpsums (add month if missing)
+        if (fund.lumpsums && fund.lumpsums.length > 0) {
+          transformed.lumpsums = fund.lumpsums
+            .filter((l) => l.amount && parseFloat(l.amount) > 0)
+            .map((l) => ({
+              amount: parseFloat(l.amount),
+              month: l.month || 1, // Default to January if month not provided
+              year: parseInt(l.year),
+            }));
+        }
+
+        return transformed;
+      });
     }
 
     await portfolio.save();

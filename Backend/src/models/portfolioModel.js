@@ -6,24 +6,84 @@ import mongoose from "mongoose";
  * Stores user's investment portfolio data
  * - Linked to user via userId
  * - Contains array of funds with raw investment data
- * - No calculations stored - those happen at query time
+ * - Supports multiple SIPs and lumpsums per fund
+ * - No calculations stored - those happen at query time via analysis services
  */
 
-const lumpsumSchema = new mongoose.Schema(
+/**
+ * SIP Entry Schema
+ * Each SIP is an independent cashflow stream
+ */
+const sipEntrySchema = new mongoose.Schema(
   {
-    year: {
+    amount: {
       type: Number,
-      required: [true, "Lumpsum year is required"],
+      required: [true, "SIP amount is required"],
+      min: [0, "SIP amount cannot be negative"],
     },
+    startMonth: {
+      type: Number,
+      required: [true, "Start month is required"],
+      min: 1,
+      max: 12,
+    },
+    startYear: {
+      type: Number,
+      required: [true, "Start year is required"],
+      min: 1990,
+      max: new Date().getFullYear(),
+    },
+    isOngoing: {
+      type: Boolean,
+      default: true,
+    },
+    // Only required if isOngoing is false
+    endMonth: {
+      type: Number,
+      min: 1,
+      max: 12,
+      default: null,
+    },
+    endYear: {
+      type: Number,
+      min: 1990,
+      default: null,
+    },
+  },
+  { _id: true }
+);
+
+/**
+ * Lumpsum Entry Schema
+ * Each lumpsum is a one-time investment
+ */
+const lumpsumEntrySchema = new mongoose.Schema(
+  {
     amount: {
       type: Number,
       required: [true, "Lumpsum amount is required"],
       min: [0, "Amount cannot be negative"],
     },
+    month: {
+      type: Number,
+      required: [true, "Investment month is required"],
+      min: 1,
+      max: 12,
+    },
+    year: {
+      type: Number,
+      required: [true, "Investment year is required"],
+      min: 1990,
+      max: new Date().getFullYear(),
+    },
   },
-  { _id: false }
+  { _id: true }
 );
 
+/**
+ * Fund Schema
+ * Each fund can have multiple SIPs and lumpsums
+ */
 const fundSchema = new mongoose.Schema(
   {
     assetType: {
@@ -46,19 +106,14 @@ const fundSchema = new mongoose.Schema(
       trim: true,
       maxlength: [200, "Asset name cannot exceed 200 characters"],
     },
-    investmentStartYear: {
-      type: Number,
-      required: [true, "Investment start year is required"],
-      min: [1990, "Start year must be 1990 or later"],
-      max: [new Date().getFullYear(), "Start year cannot be in the future"],
+    // Multiple SIP entries (each is an independent cashflow)
+    sips: {
+      type: [sipEntrySchema],
+      default: [],
     },
-    sip: {
-      type: Number,
-      default: null,
-      min: [0, "SIP amount cannot be negative"],
-    },
+    // Multiple lumpsum entries
     lumpsums: {
-      type: [lumpsumSchema],
+      type: [lumpsumEntrySchema],
       default: [],
     },
   },
@@ -88,6 +143,11 @@ const portfolioSchema = new mongoose.Schema(
         },
         message: "Portfolio must have at least one fund",
       },
+    },
+    // Track if this is a sample/demo portfolio
+    isSample: {
+      type: Boolean,
+      default: false,
     },
   },
   {

@@ -5,7 +5,7 @@ import {
   getFundSuggestions,
   searchFunds,
   getFundsMetadata,
-} from "../services/fundValidation.service.js";
+} from "../middleware/Fund.Validation_service.js";
 
 /**
  * FundReference Controller
