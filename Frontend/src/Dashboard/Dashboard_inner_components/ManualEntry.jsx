@@ -295,7 +295,9 @@ export default function ManualEntryPage() {
       // ❌ Neither: invalid
       if (validSips.length === 0 && validLumpsums.length === 0) {
         setError(
-          `Fund ${i + 1}: Please enter at least one SIP or lumpsum investment`
+          `Fund ${
+            i + 1
+          } must have either SIP or lumpsum investment with amount > 0`
         );
         return false;
       }
@@ -314,7 +316,9 @@ export default function ManualEntryPage() {
         // Validate date is within NAV range
         if (sip.startYear < NAV_START_YEAR || sip.startYear > NAV_END_YEAR) {
           setError(
-            `Fund ${i + 1}, SIP ${j + 1}: Start year must be ${NAV_START_YEAR} (NAV data range)`
+            `Fund ${i + 1}, SIP ${
+              j + 1
+            }: Start year must be ${NAV_START_YEAR} (NAV data range)`
           );
           return false;
         }
@@ -332,7 +336,9 @@ export default function ManualEntryPage() {
           // Validate end is within NAV range
           if (sip.endYear < NAV_START_YEAR || sip.endYear > NAV_END_YEAR) {
             setError(
-              `Fund ${i + 1}, SIP ${j + 1}: End year must be ${NAV_END_YEAR} (NAV data range)`
+              `Fund ${i + 1}, SIP ${
+                j + 1
+              }: End year must be ${NAV_END_YEAR} (NAV data range)`
             );
             return false;
           }
@@ -355,7 +361,9 @@ export default function ManualEntryPage() {
 
         if (lumpsum.year < NAV_START_YEAR || lumpsum.year > NAV_END_YEAR) {
           setError(
-            `Fund ${i + 1}, Lumpsum ${j + 1}: Investment year must be ${NAV_START_YEAR} (NAV data range)`
+            `Fund ${i + 1}, Lumpsum ${
+              j + 1
+            }: Investment year must be ${NAV_START_YEAR} (NAV data range)`
           );
           return false;
         }
@@ -488,6 +496,36 @@ export default function ManualEntryPage() {
                   ? "Update your portfolio details"
                   : "Add your investments manually"}
               </p>
+            </div>
+
+            {/* NAV Data Info Banner */}
+            <div
+              className="mb-6 p-4 rounded-xl flex items-start gap-3"
+              style={{
+                backgroundColor: "rgba(139, 92, 246, 0.1)",
+                border: "1px solid rgba(139, 92, 246, 0.3)",
+              }}
+            >
+              <Info
+                className="w-5 h-5 shrink-0 mt-0.5"
+                style={{ color: "var(--accent-purple)" }}
+              />
+              <div>
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Demo Mode - FY 2024-25
+                </p>
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Insights are generated using simulated NAV data for Jan 2024 –
+                  Dec 2024. Select investment dates within this range for
+                  accurate analysis.
+                </p>
+              </div>
             </div>
 
             {/* Messages */}
@@ -681,8 +719,17 @@ function FundCard({
               {fund.assetName || `Fund ${fundIndex + 1}`}
             </h3>
             <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-              {fund.sips.filter((s) => s.amount).length} SIP(s) •{" "}
-              {fund.lumpsums.filter((l) => l.amount).length} Lumpsum(s)
+              {
+                fund.sips.filter((s) => s.amount && parseFloat(s.amount) > 0)
+                  .length
+              }{" "}
+              SIP(s) •{" "}
+              {
+                fund.lumpsums.filter(
+                  (l) => l.amount && parseFloat(l.amount) > 0
+                ).length
+              }{" "}
+              Lumpsum(s)
             </p>
           </div>
         </div>
@@ -964,7 +1011,7 @@ function SipEntry({ sip, sipIndex, sipsCount, onUpdate, onRemove }) {
               color: "var(--text-primary)",
             }}
           >
-            {YEARS.map((y) => (
+            {ALLOWED_YEARS.map((y) => (
               <option key={y} value={y}>
                 {y}
               </option>
@@ -996,10 +1043,11 @@ function SipEntry({ sip, sipIndex, sipsCount, onUpdate, onRemove }) {
         </span>
       </div>
 
-      {/* Helper Text */}
+      {/* Helper Text - clarify ongoing evaluation till NAV cutoff */}
       {sip.isOngoing && (
         <p className="text-xs mb-3" style={{ color: "var(--text-tertiary)" }}>
-          💡 This SIP will be considered ongoing till the current date.
+          💡 Ongoing SIPs are evaluated till Dec 2024 (simulated NAV data
+          cutoff).
         </p>
       )}
 
@@ -1052,7 +1100,7 @@ function SipEntry({ sip, sipIndex, sipsCount, onUpdate, onRemove }) {
               }}
             >
               <option value="">Select</option>
-              {YEARS.map((y) => (
+              {ALLOWED_YEARS.map((y) => (
                 <option key={y} value={y}>
                   {y}
                 </option>
@@ -1097,7 +1145,7 @@ function LumpsumEntry({ lumpsum, onUpdate, onRemove }) {
           color: "var(--text-primary)",
         }}
       >
-        {YEARS.map((y) => (
+        {ALLOWED_YEARS.map((y) => (
           <option key={y} value={y}>
             {y}
           </option>

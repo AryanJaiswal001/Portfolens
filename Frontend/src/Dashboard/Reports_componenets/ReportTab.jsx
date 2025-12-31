@@ -260,6 +260,7 @@ const ReportTab = () => {
             marketCapExposure={marketCapExposure}
             sectorExposure={sectorExposure}
             fundPerformance={fundPerformance}
+            totalInvested={performanceSummary.totalInvested}
           />
         );
       case "risk":
@@ -352,6 +353,155 @@ const ReportTab = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// INVESTMENT BREAKDOWN COMPONENT
+// ═══════════════════════════════════════════════════════════════
+const InvestmentBreakdown = ({ funds }) => {
+  // Calculate totals
+  const totals = funds.reduce(
+    (acc, fund) => ({
+      sipCount: acc.sipCount + (fund.sipCount || 0),
+      lumpsumCount: acc.lumpsumCount + (fund.lumpsumCount || 0),
+    }),
+    { sipCount: 0, lumpsumCount: 0 }
+  );
+
+  const hasOnlySIP = totals.sipCount > 0 && totals.lumpsumCount === 0;
+  const hasOnlyLumpsum = totals.lumpsumCount > 0 && totals.sipCount === 0;
+  const hasBoth = totals.sipCount > 0 && totals.lumpsumCount > 0;
+
+  return (
+    <div
+      className="rounded-xl p-6"
+      style={{
+        backgroundColor: "var(--bg-card)",
+        border: "1px solid var(--border-subtle)",
+      }}
+    >
+      <h3
+        className="text-lg font-semibold mb-4"
+        style={{ color: "var(--text-primary)" }}
+      >
+        💳 Investment Breakdown
+      </h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* SIP Investments */}
+        <div
+          className="p-4 rounded-lg"
+          style={{
+            backgroundColor:
+              totals.sipCount > 0
+                ? "rgba(34, 197, 94, 0.1)"
+                : "var(--bg-input)",
+            border:
+              totals.sipCount > 0
+                ? "1px solid rgba(34, 197, 94, 0.3)"
+                : "1px solid var(--border-subtle)",
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">📅</span>
+            <span
+              className="text-sm font-medium"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              SIP Investments
+            </span>
+          </div>
+          <p
+            className="text-2xl font-bold"
+            style={{
+              color: totals.sipCount > 0 ? "#22c55e" : "var(--text-tertiary)",
+            }}
+          >
+            {totals.sipCount}
+          </p>
+          <p className="text-xs mt-1" style={{ color: "var(--text-tertiary)" }}>
+            {totals.sipCount === 1 ? "Active SIP" : "Active SIPs"}
+          </p>
+        </div>
+
+        {/* Lumpsum Investments */}
+        <div
+          className="p-4 rounded-lg"
+          style={{
+            backgroundColor:
+              totals.lumpsumCount > 0
+                ? "rgba(59, 130, 246, 0.1)"
+                : "var(--bg-input)",
+            border:
+              totals.lumpsumCount > 0
+                ? "1px solid rgba(59, 130, 246, 0.3)"
+                : "1px solid var(--border-subtle)",
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">💵</span>
+            <span
+              className="text-sm font-medium"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Lumpsum Investments
+            </span>
+          </div>
+          <p
+            className="text-2xl font-bold"
+            style={{
+              color:
+                totals.lumpsumCount > 0 ? "#3b82f6" : "var(--text-tertiary)",
+            }}
+          >
+            {totals.lumpsumCount}
+          </p>
+          <p className="text-xs mt-1" style={{ color: "var(--text-tertiary)" }}>
+            {totals.lumpsumCount === 1
+              ? "One-time Investment"
+              : "One-time Investments"}
+          </p>
+        </div>
+
+        {/* Investment Type Badge */}
+        <div
+          className="p-4 rounded-lg flex flex-col justify-center items-center"
+          style={{
+            backgroundColor: "var(--bg-input)",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
+          <span
+            className="px-3 py-1.5 rounded-full text-sm font-semibold mb-2"
+            style={{
+              backgroundColor: hasBoth
+                ? "rgba(139, 92, 246, 0.15)"
+                : hasOnlySIP
+                ? "rgba(34, 197, 94, 0.15)"
+                : "rgba(59, 130, 246, 0.15)",
+              color: hasBoth ? "#8b5cf6" : hasOnlySIP ? "#22c55e" : "#3b82f6",
+            }}
+          >
+            {hasBoth
+              ? "Mixed Strategy"
+              : hasOnlySIP
+              ? "SIP-only"
+              : "Lumpsum-only"}
+          </span>
+          <p
+            className="text-xs text-center"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            {hasBoth
+              ? "Combining regular & one-time investments"
+              : hasOnlySIP
+              ? "Building wealth through regular investments"
+              : "One-time capital deployment"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
 // SUMMARY TAB
 // ═══════════════════════════════════════════════════════════════
 const SummaryTab = ({
@@ -403,6 +553,11 @@ const SummaryTab = ({
           valueColor="#8b5cf6"
         />
       </div>
+
+      {/* Investment Breakdown - SIP vs Lumpsum */}
+      {portfolioSummary?.funds && portfolioSummary.funds.length > 0 && (
+        <InvestmentBreakdown funds={portfolioSummary.funds} />
+      )}
 
       {/* Key Insights */}
       {keyInsights.length > 0 && (
@@ -672,37 +827,40 @@ const PerformanceTab = ({
           >
             Fund-wise Performance
           </h3>
+          <p className="text-sm mt-1" style={{ color: "var(--text-tertiary)" }}>
+            Individual fund returns breakdown
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead style={{ background: "var(--bg-input)" }}>
               <tr>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider"
                   style={{ color: "var(--text-secondary)" }}
                 >
                   Fund Name
                 </th>
                 <th
-                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
+                  className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider"
                   style={{ color: "var(--text-secondary)" }}
                 >
                   Invested
                 </th>
                 <th
-                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
+                  className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider"
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  Current
+                  Current Value
                 </th>
                 <th
-                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
+                  className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider"
                   style={{ color: "var(--text-secondary)" }}
                 >
                   Returns
                 </th>
                 <th
-                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
+                  className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider"
                   style={{ color: "var(--text-secondary)" }}
                 >
                   XIRR
@@ -710,55 +868,121 @@ const PerformanceTab = ({
               </tr>
             </thead>
             <tbody>
-              {fundPerformance.map((fund, index) => (
-                <tr
-                  key={index}
-                  style={{
-                    borderBottom:
-                      index !== fundPerformance.length - 1
-                        ? "1px solid var(--border-subtle)"
-                        : "none",
-                  }}
-                >
-                  <td
-                    className="px-6 py-4 text-sm font-medium"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {fund.fundName}
-                  </td>
-                  <td
-                    className="px-6 py-4 text-sm text-right"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    {formatCurrency(fund.totalInvested)}
-                  </td>
-                  <td
-                    className="px-6 py-4 text-sm text-right"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    {formatCurrency(fund.currentValue)}
-                  </td>
-                  <td
-                    className="px-6 py-4 text-sm text-right font-semibold"
+              {fundPerformance.map((fund, index) => {
+                const returnColor =
+                  fund.absoluteReturnPercent >= 0 ? "#22c55e" : "#ef4444";
+                const returnBgColor =
+                  fund.absoluteReturnPercent >= 0
+                    ? "rgba(34, 197, 94, 0.1)"
+                    : "rgba(239, 68, 68, 0.1)";
+
+                return (
+                  <tr
+                    key={index}
+                    className="transition-colors duration-150 hover:bg-opacity-50"
                     style={{
-                      color:
-                        fund.absoluteReturnPercent >= 0 ? "#22c55e" : "#ef4444",
+                      borderBottom:
+                        index !== fundPerformance.length - 1
+                          ? "1px solid var(--border-subtle)"
+                          : "none",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--bg-input)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    {fund.absoluteReturnPercent >= 0 ? "+" : ""}
-                    {fund.absoluteReturnPercent}%
-                  </td>
-                  <td
-                    className="px-6 py-4 text-sm text-right"
-                    style={{ color: "#8b5cf6" }}
-                  >
-                    {fund.xirr}%
-                  </td>
-                </tr>
-              ))}
+                    {/* Fund Name - Bold with fallback */}
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span
+                          className="text-sm font-semibold"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {fund.fundName || fund.fundCode || "Unknown Fund"}
+                        </span>
+                        {fund.fundCode && fund.fundName && (
+                          <span
+                            className="text-xs mt-0.5"
+                            style={{ color: "var(--text-tertiary)" }}
+                          >
+                            {fund.fundCode}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Invested - Muted */}
+                    <td className="px-6 py-4 text-right">
+                      <span
+                        className="text-sm"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {formatCurrency(fund.totalInvested)}
+                      </span>
+                    </td>
+
+                    {/* Current Value - Primary */}
+                    <td className="px-6 py-4 text-right">
+                      <span
+                        className="text-sm font-medium"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {formatCurrency(fund.currentValue)}
+                      </span>
+                    </td>
+
+                    {/* Returns - Colored with background pill */}
+                    <td className="px-6 py-4 text-right">
+                      <span
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold"
+                        style={{
+                          backgroundColor: returnBgColor,
+                          color: returnColor,
+                        }}
+                      >
+                        {fund.absoluteReturnPercent >= 0 ? "↑" : "↓"}{" "}
+                        {Math.abs(fund.absoluteReturnPercent)}%
+                      </span>
+                    </td>
+
+                    {/* XIRR - Badge style */}
+                    <td className="px-6 py-4 text-right">
+                      <span
+                        className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold"
+                        style={{
+                          backgroundColor: "rgba(139, 92, 246, 0.15)",
+                          color: "#8b5cf6",
+                        }}
+                      >
+                        {fund.xirr}%
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+
+        {/* Table Summary */}
+        {fundPerformance.length > 0 && (
+          <div
+            className="px-6 py-3 flex justify-between items-center text-xs"
+            style={{
+              backgroundColor: "var(--bg-input)",
+              color: "var(--text-tertiary)",
+              borderTop: "1px solid var(--border-subtle)",
+            }}
+          >
+            <span>
+              {fundPerformance.length} fund
+              {fundPerformance.length > 1 ? "s" : ""} in portfolio
+            </span>
+            <span>Hover over rows for details</span>
+          </div>
+        )}
       </div>
 
       {/* Performance Period */}
@@ -790,6 +1014,7 @@ const AllocationTab = ({
   marketCapExposure,
   sectorExposure,
   fundPerformance,
+  totalInvested,
 }) => {
   return (
     <div className="space-y-6">
@@ -810,9 +1035,10 @@ const AllocationTab = ({
         <div className="flex justify-center py-4">
           <AllocationDonutChart
             data={assetAllocation}
-            size={200}
-            strokeWidth={35}
+            size={220}
+            strokeWidth={38}
             showLegend={true}
+            totalInvested={totalInvested}
           />
         </div>
       </div>

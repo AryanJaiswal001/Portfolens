@@ -381,16 +381,27 @@ function PortfolioDetailsModal({
     return months[(monthNum || 1) - 1] || "Jan";
   };
 
-  // Format SIP summary string
+  // Format SIP summary string with evaluation clarity
   const formatSipSummary = (sip) => {
     const amount = formatCurrency(sip.amount);
     const startDate = `${formatMonth(sip.startMonth)} ${sip.startYear}`;
 
     if (sip.isOngoing !== false) {
-      return `${amount}/month (Ongoing since ${startDate})`;
+      // Ongoing SIP - evaluated till Dec 2024 (NAV cutoff)
+      return {
+        main: `${amount}/month`,
+        duration: `${startDate} – Dec 2024`,
+        status: "Ongoing (evaluated till Dec 2024)",
+        isOngoing: true,
+      };
     } else {
       const endDate = `${formatMonth(sip.endMonth)} ${sip.endYear}`;
-      return `${amount}/month (${startDate} – ${endDate})`;
+      return {
+        main: `${amount}/month`,
+        duration: `${startDate} – ${endDate}`,
+        status: "Stopped",
+        isOngoing: false,
+      };
     }
   };
 
@@ -546,24 +557,57 @@ function PortfolioDetailsModal({
                 {fund.sips &&
                   Array.isArray(fund.sips) &&
                   fund.sips.length > 0 && (
-                    <div className="space-y-1.5 mb-2">
+                    <div className="space-y-2 mb-2">
                       {fund.sips
                         .filter((s) => s.amount > 0)
-                        .map((sip, sipIndex) => (
-                          <div
-                            key={sipIndex}
-                            className="flex items-center gap-2 text-sm"
-                            style={{
-                              color:
-                                sip.isOngoing !== false
-                                  ? "var(--accent-green)"
-                                  : "var(--text-secondary)",
-                            }}
-                          >
-                            <TrendingUp className="w-3.5 h-3.5" />
-                            <span>{formatSipSummary(sip)}</span>
-                          </div>
-                        ))}
+                        .map((sip, sipIndex) => {
+                          const sipInfo = formatSipSummary(sip);
+                          return (
+                            <div
+                              key={sipIndex}
+                              className="p-2 rounded-lg"
+                              style={{
+                                backgroundColor: "var(--bg-card)",
+                                border: "1px solid var(--border-subtle)",
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <TrendingUp
+                                  className="w-3.5 h-3.5"
+                                  style={{
+                                    color: sipInfo.isOngoing
+                                      ? "var(--accent-green)"
+                                      : "var(--text-secondary)",
+                                  }}
+                                />
+                                <span
+                                  className="text-sm font-medium"
+                                  style={{ color: "var(--text-primary)" }}
+                                >
+                                  {sipInfo.main}
+                                </span>
+                              </div>
+                              <div className="ml-5.5 mt-1">
+                                <p
+                                  className="text-xs"
+                                  style={{ color: "var(--text-tertiary)" }}
+                                >
+                                  Duration: {sipInfo.duration}
+                                </p>
+                                <p
+                                  className="text-xs"
+                                  style={{
+                                    color: sipInfo.isOngoing
+                                      ? "var(--accent-green)"
+                                      : "var(--text-tertiary)",
+                                  }}
+                                >
+                                  {sipInfo.status}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
                     </div>
                   )}
 

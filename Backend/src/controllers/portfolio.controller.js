@@ -69,11 +69,24 @@ export const createPortfolio = async (req, res) => {
           } is missing required fields (assetType, assetName)`,
         });
       }
-      // Must have either SIP or lumpsum
-      const hasSip = fund.sip && parseFloat(fund.sip) > 0;
+
+      // Must have either SIP or lumpsum (support both old and new formats)
+      // New format: fund.sips array
+      // Old format: fund.sip single value
+      const hasSipsArray =
+        fund.sips &&
+        Array.isArray(fund.sips) &&
+        fund.sips.some((s) => s.amount && parseFloat(s.amount) > 0);
+      const hasSipSingle = fund.sip && parseFloat(fund.sip) > 0;
+      const hasSip = hasSipsArray || hasSipSingle;
+
       const hasLumpsum =
         fund.lumpsums &&
         fund.lumpsums.some((l) => l.amount && parseFloat(l.amount) > 0);
+
+      // ✅ SIP-only: allowed
+      // ✅ Lumpsum-only: allowed
+      // ❌ Neither: invalid
       if (!hasSip && !hasLumpsum) {
         return res.status(400).json({
           success: false,
@@ -91,8 +104,21 @@ export const createPortfolio = async (req, res) => {
         lumpsums: [],
       };
 
-      // Convert single SIP amount to sips array entry
-      if (fund.sip && parseFloat(fund.sip) > 0) {
+      // NEW FORMAT: Handle sips array from frontend
+      if (fund.sips && Array.isArray(fund.sips) && fund.sips.length > 0) {
+        transformed.sips = fund.sips
+          .filter((s) => s.amount && parseFloat(s.amount) > 0)
+          .map((s) => ({
+            amount: parseFloat(s.amount),
+            startMonth: parseInt(s.startMonth) || 1,
+            startYear: parseInt(s.startYear) || 2024,
+            isOngoing: s.isOngoing !== false, // Default to true
+            endMonth: s.isOngoing === false ? parseInt(s.endMonth) : null,
+            endYear: s.isOngoing === false ? parseInt(s.endYear) : null,
+          }));
+      }
+      // OLD FORMAT: Convert single SIP amount to sips array entry (backward compatibility)
+      else if (fund.sip && parseFloat(fund.sip) > 0) {
         const startYear = fund.investmentStartYear || new Date().getFullYear();
         transformed.sips.push({
           amount: parseFloat(fund.sip),
@@ -108,7 +134,7 @@ export const createPortfolio = async (req, res) => {
           .filter((l) => l.amount && parseFloat(l.amount) > 0)
           .map((l) => ({
             amount: parseFloat(l.amount),
-            month: l.month || 1, // Default to January if month not provided
+            month: parseInt(l.month) || 1, // Default to January if month not provided
             year: parseInt(l.year),
           }));
       }
@@ -268,8 +294,21 @@ export const updatePortfolio = async (req, res) => {
           lumpsums: [],
         };
 
-        // Convert single SIP amount to sips array entry
-        if (fund.sip && parseFloat(fund.sip) > 0) {
+        // NEW FORMAT: Handle sips array from frontend
+        if (fund.sips && Array.isArray(fund.sips) && fund.sips.length > 0) {
+          transformed.sips = fund.sips
+            .filter((s) => s.amount && parseFloat(s.amount) > 0)
+            .map((s) => ({
+              amount: parseFloat(s.amount),
+              startMonth: parseInt(s.startMonth) || 1,
+              startYear: parseInt(s.startYear) || 2024,
+              isOngoing: s.isOngoing !== false, // Default to true
+              endMonth: s.isOngoing === false ? parseInt(s.endMonth) : null,
+              endYear: s.isOngoing === false ? parseInt(s.endYear) : null,
+            }));
+        }
+        // OLD FORMAT: Convert single SIP amount to sips array entry (backward compatibility)
+        else if (fund.sip && parseFloat(fund.sip) > 0) {
           const startYear =
             fund.investmentStartYear || new Date().getFullYear();
           transformed.sips.push({
@@ -286,7 +325,7 @@ export const updatePortfolio = async (req, res) => {
             .filter((l) => l.amount && parseFloat(l.amount) > 0)
             .map((l) => ({
               amount: parseFloat(l.amount),
-              month: l.month || 1, // Default to January if month not provided
+              month: parseInt(l.month) || 1, // Default to January if month not provided
               year: parseInt(l.year),
             }));
         }
