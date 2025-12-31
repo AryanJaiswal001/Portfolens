@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import PrivateLayout from "./PrivateLayout";
 import PortfolioCard from "./Portfolio_Components/PortfolioCard";
 import { getPortfolios, deletePortfolio } from "../service/portfolioService";
+import { useAnalysis } from "../context/AnalysisContext";
 import { Plus, Briefcase, Sparkles } from "lucide-react";
 
 export default function PortfolioPage() {
   const navigate = useNavigate();
+  const { generateSampleAnalysis } = useAnalysis();
 
   const [portfolios, setPortfolios] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,9 +174,9 @@ export default function PortfolioPage() {
               Create Portfolio
             </button>
             <button
-              onClick={() => {
-                // TODO: Load sample portfolio
-                console.log("Load sample portfolio");
+              onClick={async () => {
+                await generateSampleAnalysis();
+                navigate("/insights");
               }}
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all hover:bg-white/5"
               style={{

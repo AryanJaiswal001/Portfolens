@@ -13,17 +13,21 @@ import Portfolio from "../models/portfolioModel.js";
  * Used when sending data back for editing
  */
 const transformForFrontend = (portfolio) => {
-  const transformed = portfolio.toObject ? portfolio.toObject() : { ...portfolio };
-  
+  const transformed = portfolio.toObject
+    ? portfolio.toObject()
+    : { ...portfolio };
+
   transformed.funds = transformed.funds.map((fund) => {
     // Get first SIP entry for backward compatibility
     const firstSip = fund.sips && fund.sips.length > 0 ? fund.sips[0] : null;
-    
+
     return {
       ...fund,
       // For backward compatibility with frontend
       sip: firstSip ? firstSip.amount : null,
-      investmentStartYear: firstSip ? firstSip.startYear : new Date().getFullYear(),
+      investmentStartYear: firstSip
+        ? firstSip.startYear
+        : new Date().getFullYear(),
       // Transform lumpsums to frontend format
       lumpsums: (fund.lumpsums || []).map((l) => ({
         year: l.year,
@@ -32,7 +36,7 @@ const transformForFrontend = (portfolio) => {
       })),
     };
   });
-  
+
   return transformed;
 };
 
@@ -60,7 +64,9 @@ export const createPortfolio = async (req, res) => {
       if (!fund.assetType || !fund.assetName) {
         return res.status(400).json({
           success: false,
-          message: `Fund ${i + 1} is missing required fields (assetType, assetName)`,
+          message: `Fund ${
+            i + 1
+          } is missing required fields (assetType, assetName)`,
         });
       }
       // Must have either SIP or lumpsum
@@ -157,7 +163,9 @@ export const getPortfolios = async (req, res) => {
       .lean();
 
     // Transform each portfolio for frontend compatibility
-    const transformedPortfolios = portfolios.map((p) => transformForFrontend(p));
+    const transformedPortfolios = portfolios.map((p) =>
+      transformForFrontend(p)
+    );
 
     res.status(200).json({
       success: true,
@@ -262,7 +270,8 @@ export const updatePortfolio = async (req, res) => {
 
         // Convert single SIP amount to sips array entry
         if (fund.sip && parseFloat(fund.sip) > 0) {
-          const startYear = fund.investmentStartYear || new Date().getFullYear();
+          const startYear =
+            fund.investmentStartYear || new Date().getFullYear();
           transformed.sips.push({
             amount: parseFloat(fund.sip),
             startMonth: 1, // Default to January

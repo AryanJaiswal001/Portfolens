@@ -1,141 +1,331 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PrivateLayout from "../PrivateLayout";
-import ReportEmptyState from "./ReportEmptyState";
+import { useAnalysis } from "../../context/AnalysisContext";
 import { usePortfolio } from "../../context/PortfolioContext";
-import { formatCurrency } from "../../data/samplePortfolio";
-import { PieChart, ShieldAlert, Layers, FlaskConical } from "lucide-react";
+import DemoDisclaimer, { DemoBadge } from "../../components/DemoDisclaimer";
+import ReportEmptyState from "./ReportEmptyState";
 import {
-  PerformanceChart,
+  PieChart,
+  ShieldAlert,
+  Layers,
+  Sparkles,
+  RefreshCw,
+  Download,
+  TrendingUp,
+  BarChart3,
+} from "lucide-react";
+import {
   AllocationDonutChart,
-  OverlapVisualization,
   SectorConcentrationChart,
 } from "../../components/charts";
 
+/**
+ * Format currency for display
+ */
+const formatCurrency = (amount) => {
+  if (amount === null || amount === undefined) return "—";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
 const ReportTab = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("summary");
 
-  // Get portfolio data from context - single source of truth
-  const { activePortfolio, hasPortfolio, isSample } = usePortfolio();
+  // Get analysis data from context
+  const {
+    loading,
+    error,
+    hasAnalysis,
+    isDemoMode,
+    dataAsOf,
+    navPeriod,
+    disclaimer,
+    portfolioSummary,
+    diversification,
+    performance,
+    insights,
+    reports,
+    generateAnalysis,
+    generateSampleAnalysis,
+  } = useAnalysis();
+
+  const { activePortfolio, hasPortfolio } = usePortfolio();
 
   const tabs = [
-    { id: "summary", label: "Summary" },
-    { id: "performance", label: "Performance" },
-    { id: "allocation", label: "Allocation" },
-    { id: "risk", label: "Risk" },
-    { id: "overlap", label: "Overlap & Concentration" },
+    { id: "summary", label: "Summary", icon: "📋" },
+    { id: "performance", label: "Performance", icon: "📈" },
+    { id: "allocation", label: "Allocation", icon: "🎯" },
+    { id: "risk", label: "Risk", icon: "⚠️" },
   ];
 
-  // Build report data from activePortfolio or use defaults
-  const reportData = {
-    totalInvested: hasPortfolio
-      ? formatCurrency(activePortfolio.totalInvested)
-      : "₹0",
-    currentValue: hasPortfolio
-      ? formatCurrency(activePortfolio.currentValue)
-      : "₹0",
-    numberOfFunds: activePortfolio?.numberOfFunds ?? 0,
-    investmentDuration: activePortfolio?.investmentDuration ?? "—",
-    absoluteReturn: hasPortfolio
-      ? formatCurrency(activePortfolio.absoluteReturn)
-      : "₹0",
-    percentageReturn: hasPortfolio
-      ? `${activePortfolio.percentageReturn}%`
-      : "0%",
-    riskLevel: activePortfolio?.riskLevel ?? "—",
-    funds: activePortfolio?.funds ?? [],
-    allocation: activePortfolio?.allocation ?? {},
-    stockOverlap: activePortfolio?.stockOverlap ?? [],
-    sectorConcentration: activePortfolio?.sectorConcentration ?? [],
-    riskScenarios: activePortfolio?.riskScenarios ?? null,
-    performanceHistory: activePortfolio?.performanceHistory ?? [],
-  };
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case "summary":
-        // Summary always renders with zero defaults
-        return <SummaryTab data={reportData} hasData={hasPortfolio} />;
-      case "performance":
-        // Performance always renders with zero/placeholder
-        return <PerformanceTab data={reportData} hasData={hasPortfolio} />;
-      case "allocation":
-        // Allocation shows empty state if no data
-        return hasPortfolio ? (
-          <AllocationTab data={reportData} />
-        ) : (
-          <ReportEmptyState
-            icon={PieChart}
-            title="No Allocation Data Available"
-            description="This report shows how your investments are distributed across different funds and asset classes. Add your portfolio to see your personalized allocation breakdown."
-          />
-        );
-      case "risk":
-        // Risk shows empty state if no data
-        return hasPortfolio ? (
-          <RiskTab data={reportData} />
-        ) : (
-          <ReportEmptyState
-            icon={ShieldAlert}
-            title="No Risk Analysis Available"
-            description="This report evaluates your portfolio's risk level based on asset allocation and historical volatility. Add your investments to see potential market impact scenarios."
-          />
-        );
-      case "overlap":
-        // Overlap shows empty state if no data
-        return hasPortfolio ? (
-          <OverlapTab data={reportData} />
-        ) : (
-          <ReportEmptyState
-            icon={Layers}
-            title="No Overlap Data Available"
-            description="This report identifies hidden stock duplications across your mutual funds that may reduce diversification. Add multiple funds to analyze concentration risks."
-          />
-        );
-      default:
-        return <SummaryTab data={reportData} hasData={hasPortfolio} />;
+  // Handle generate analysis
+  const handleGenerateAnalysis = async () => {
+    if (activePortfolio?._id) {
+      await generateAnalysis(activePortfolio._id);
+    } else {
+      await generateSampleAnalysis();
     }
   };
 
-  return (
-    <PrivateLayout pageTitle="Reports">
-      <div className="space-y-6">
-        {/**Page header*/}
-        <div>
-          <div className="flex items-center gap-3">
+  // ═══════════════════════════════════════════════════════════════
+  // LOADING STATE
+  // ═══════════════════════════════════════════════════════════════
+  if (loading) {
+    return (
+      <PrivateLayout pageTitle="Reports">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div
+            className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mb-6"
+            style={{
+              borderColor: "var(--accent-purple)",
+              borderTopColor: "transparent",
+            }}
+          />
+          <h3
+            className="text-lg font-semibold mb-2"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Generating Reports...
+          </h3>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            Building comprehensive portfolio analysis
+          </p>
+        </div>
+      </PrivateLayout>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // NO ANALYSIS STATE - SHOW GENERATE BUTTON
+  // ═══════════════════════════════════════════════════════════════
+  if (!hasAnalysis) {
+    return (
+      <PrivateLayout pageTitle="Reports">
+        <div className="space-y-6">
+          {/* Page Header */}
+          <div>
             <h1
               className="text-3xl font-bold"
               style={{ color: "var(--text-primary)" }}
             >
               Reports
             </h1>
-            {/* Sample Data Badge */}
-            {isSample && (
-              <span
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+            <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
+              Generate detailed analysis reports for your portfolio
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                backgroundColor: "rgba(239, 68, 68, 0.1)",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+              }}
+            >
+              <p className="text-red-500 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Generate CTA */}
+          <div
+            className="rounded-2xl p-8 text-center"
+            style={{
+              backgroundColor: "var(--bg-card)",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
+            <div
+              className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--accent-purple), var(--accent-blue))",
+              }}
+            >
+              <BarChart3 className="w-10 h-10 text-white" />
+            </div>
+
+            <h2
+              className="text-2xl font-bold mb-3"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Generate Portfolio Reports
+            </h2>
+            <p
+              className="text-base mb-6 max-w-md mx-auto"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Get comprehensive reports including performance analysis,
+              allocation breakdown, risk assessment, and actionable
+              recommendations.
+            </p>
+
+            <button
+              onClick={handleGenerateAnalysis}
+              disabled={loading}
+              className="px-8 py-4 rounded-xl font-semibold text-white transition-all hover:scale-105 disabled:opacity-50 flex items-center gap-2 mx-auto"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--accent-purple), var(--accent-blue))",
+              }}
+            >
+              <Sparkles className="w-5 h-5" />
+              Generate Insights & Reports
+            </button>
+
+            <p
+              className="text-xs mt-4"
+              style={{ color: "var(--text-tertiary)" }}
+            >
+              {hasPortfolio
+                ? "Analysis will be based on your saved portfolio"
+                : "Using sample portfolio data for demo"}
+            </p>
+          </div>
+
+          {/* Report Types Preview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
+                className="p-5 rounded-xl opacity-60"
                 style={{
-                  background:
-                    "linear-gradient(135deg, rgba(147, 51, 234, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%)",
-                  color: "var(--accent-purple)",
-                  border: "1px solid var(--accent-purple)",
+                  backgroundColor: "var(--bg-card)",
+                  border: "1px solid var(--border-subtle)",
                 }}
               >
-                <FlaskConical className="w-3 h-3" />
-                Sample Data
-              </span>
-            )}
+                <div className="text-2xl mb-3">{tab.icon}</div>
+                <h3
+                  className="font-semibold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {tab.label} Report
+                </h3>
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  Available after analysis
+                </p>
+              </div>
+            ))}
           </div>
-          <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
-            Detailed analysis and explanations of your portfolio insights
-          </p>
         </div>
-        {/**Tab navigation*/}
+      </PrivateLayout>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // HAS ANALYSIS - RENDER REPORTS
+  // ═══════════════════════════════════════════════════════════════
+  const reportData = reports || {};
+  const performanceSummary = performance?.summary || {};
+  const fundPerformance = performance?.funds || [];
+  const assetAllocation = diversification?.assetAllocation || {};
+  const categoryDistribution = diversification?.categoryDistribution || {};
+  const marketCapExposure = diversification?.marketCapExposure || {};
+  const sectorExposure = diversification?.sectorExposure || {};
+  const concentrationRisks = diversification?.concentrationRisks || [];
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "summary":
+        return (
+          <SummaryTab
+            reportData={reportData}
+            performanceSummary={performanceSummary}
+            portfolioSummary={portfolioSummary}
+            insights={insights}
+          />
+        );
+      case "performance":
+        return (
+          <PerformanceTab
+            performanceSummary={performanceSummary}
+            fundPerformance={fundPerformance}
+            reportData={reportData}
+          />
+        );
+      case "allocation":
+        return (
+          <AllocationTab
+            assetAllocation={assetAllocation}
+            categoryDistribution={categoryDistribution}
+            marketCapExposure={marketCapExposure}
+            sectorExposure={sectorExposure}
+            fundPerformance={fundPerformance}
+          />
+        );
+      case "risk":
+        return (
+          <RiskTab
+            concentrationRisks={concentrationRisks}
+            insights={insights}
+            reportData={reportData}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <PrivateLayout pageTitle="Reports">
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1
+                className="text-3xl font-bold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Reports
+              </h1>
+              {isDemoMode && <DemoBadge />}
+            </div>
+            <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
+              {portfolioSummary?.name || "Portfolio Analysis Report"}
+            </p>
+          </div>
+          <button
+            onClick={handleGenerateAnalysis}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-white/5"
+            style={{
+              backgroundColor: "var(--bg-card)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
+
+        {/* Demo Disclaimer - MANDATORY */}
+        {isDemoMode && (
+          <DemoDisclaimer
+            disclaimer={disclaimer}
+            dataAsOf={dataAsOf}
+            navPeriod={navPeriod}
+          />
+        )}
+
+        {/* Tab Navigation */}
         <div style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <nav className="flex overflow-x-auto scrollbar-hide -mb-px space-x-8">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="whitespace-nowrap py-4 px-1 font-medium text-sm"
+                className="whitespace-nowrap py-4 px-1 font-medium text-sm flex items-center gap-2"
                 style={{
                   borderBottom:
                     activeTab === tab.id
@@ -147,85 +337,112 @@ const ReportTab = () => {
                       : "var(--text-secondary)",
                 }}
               >
+                <span>{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
           </nav>
         </div>
 
-        {/**Tab content*/}
+        {/* Tab Content */}
         <div>{renderTabContent()}</div>
       </div>
     </PrivateLayout>
   );
 };
 
-//Summary tab
-const SummaryTab = ({ data, hasData }) => {
-  const infoCards = [
-    { label: "Total Invested", value: data.totalInvested, icon: "💰" },
-    { label: "Current Value", value: data.currentValue, icon: "📈" },
-    { label: "Number of Funds", value: data.numberOfFunds, icon: "📊" },
-    {
-      label: "Investment Duration",
-      value: data.investmentDuration,
-      icon: "⏱️",
-    },
-  ];
+// ═══════════════════════════════════════════════════════════════
+// SUMMARY TAB
+// ═══════════════════════════════════════════════════════════════
+const SummaryTab = ({
+  reportData,
+  performanceSummary,
+  portfolioSummary,
+  insights,
+}) => {
+  const executiveSummary = reportData.executiveSummary || {};
+  const keyInsights = reportData.keyInsights || insights?.highlights || [];
+  const recommendations =
+    reportData.recommendations || insights?.recommendations || [];
 
   return (
     <div className="space-y-6">
-      {/* Empty state hint banner */}
-      {!hasData && (
+      {/* Executive Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SummaryCard
+          label="Total Invested"
+          value={formatCurrency(
+            executiveSummary.totalInvested || performanceSummary.totalInvested
+          )}
+          icon="💰"
+        />
+        <SummaryCard
+          label="Current Value"
+          value={formatCurrency(
+            executiveSummary.currentValue || performanceSummary.currentValue
+          )}
+          icon="📈"
+        />
+        <SummaryCard
+          label="Absolute Return"
+          value={formatCurrency(
+            executiveSummary.absoluteReturn || performanceSummary.absoluteReturn
+          )}
+          icon="💹"
+          valueColor={
+            (executiveSummary.absoluteReturn ||
+              performanceSummary.absoluteReturn) >= 0
+              ? "#22c55e"
+              : "#ef4444"
+          }
+        />
+        <SummaryCard
+          label="XIRR"
+          value={`${executiveSummary.xirr || performanceSummary.xirr || 0}%`}
+          icon="🎯"
+          valueColor="#8b5cf6"
+        />
+      </div>
+
+      {/* Key Insights */}
+      {keyInsights.length > 0 && (
         <div
-          className="rounded-xl p-4 flex items-center gap-3"
+          className="rounded-xl p-6"
           style={{
-            background: "rgba(147, 51, 234, 0.05)",
-            border: "1px dashed var(--accent-purple)",
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border-subtle)",
           }}
         >
-          <span className="text-xl">💡</span>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Add your portfolio to see real investment data. Currently showing
-            default values.
-          </p>
+          <h3
+            className="text-lg font-semibold mb-4"
+            style={{ color: "var(--text-primary)" }}
+          >
+            📌 Key Insights
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {keyInsights.map((insight, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-4 rounded-lg"
+                style={{
+                  backgroundColor: "var(--bg-input)",
+                  border: "1px solid var(--border-subtle)",
+                }}
+              >
+                <span className="text-xl">{insight.icon}</span>
+                <span
+                  className="text-sm"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {insight.text}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/**Info Cards Grid*/}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {infoCards.map((card, index) => (
-          <div
-            key={index}
-            className="rounded-xl p-6"
-            style={{
-              background: "var(--bg-card)",
-              border: "1px solid var(--border-subtle)",
-              boxShadow: "var(--shadow-card)",
-              opacity: hasData ? 1 : 0.7,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-2xl">{card.icon}</span>
-            </div>
-
-            <p
-              className="mt-4 text-sm font-medium"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              {card.label}
-            </p>
-            <p
-              className="mt-1 text-2xl font-semibold"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {card.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/**Explaination block*/}
+      {/* Portfolio Overview */}
       <div
         className="rounded-xl p-6"
         style={{
@@ -235,74 +452,145 @@ const SummaryTab = ({ data, hasData }) => {
         }}
       >
         <h3
-          className="text-lg font-semibold mb-2"
+          className="text-lg font-semibold mb-3"
           style={{ color: "var(--text-primary)" }}
         >
-          📋 Summary Overview
+          📋 Report Summary
         </h3>
-        <p style={{ color: "var(--text-secondary)" }}>
-          This summary gives a high-level view of how your portfolio is
-          structured and deployed. It provides key metrics at a glance, helping
-          you understand your overall investment position without diving into
-          granular details.
-        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <span style={{ color: "var(--text-tertiary)" }}>Funds</span>
+            <p
+              className="font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {portfolioSummary?.fundCount || executiveSummary.fundCount || 0}
+            </p>
+          </div>
+          <div>
+            <span style={{ color: "var(--text-tertiary)" }}>Health Score</span>
+            <p
+              className="font-semibold capitalize"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {executiveSummary.healthScore || "—"}
+            </p>
+          </div>
+          <div>
+            <span style={{ color: "var(--text-tertiary)" }}>Return %</span>
+            <p
+              className="font-semibold"
+              style={{
+                color:
+                  (executiveSummary.absoluteReturnPercent ||
+                    performanceSummary.absoluteReturnPercent) >= 0
+                    ? "#22c55e"
+                    : "#ef4444",
+              }}
+            >
+              {executiveSummary.absoluteReturnPercent ||
+                performanceSummary.absoluteReturnPercent ||
+                0}
+              %
+            </p>
+          </div>
+          <div>
+            <span style={{ color: "var(--text-tertiary)" }}>
+              Report Generated
+            </span>
+            <p
+              className="font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {reportData.generatedAt
+                ? new Date(reportData.generatedAt).toLocaleDateString("en-IN")
+                : "—"}
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Recommendations */}
+      {recommendations.length > 0 && (
+        <div
+          className="rounded-xl p-6"
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
+          <h3
+            className="text-lg font-semibold mb-4"
+            style={{ color: "var(--text-primary)" }}
+          >
+            💡 Recommendations
+          </h3>
+          <div className="space-y-3">
+            {recommendations.slice(0, 3).map((rec, index) => (
+              <div
+                key={index}
+                className="p-4 rounded-lg"
+                style={{
+                  backgroundColor: "var(--bg-input)",
+                  border: "1px solid var(--border-subtle)",
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className="px-2 py-1 rounded text-xs font-semibold"
+                    style={{
+                      backgroundColor:
+                        rec.priority === "high"
+                          ? "rgba(239, 68, 68, 0.2)"
+                          : "rgba(245, 158, 11, 0.2)",
+                      color: rec.priority === "high" ? "#ef4444" : "#f59e0b",
+                    }}
+                  >
+                    {rec.priority}
+                  </span>
+                  <div>
+                    <h4
+                      className="font-semibold text-sm"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {rec.title}
+                    </h4>
+                    <p
+                      className="text-xs mt-1"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {rec.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-// ==================== PERFORMANCE TAB ====================
-const PerformanceTab = ({ data, hasData }) => {
+// ═══════════════════════════════════════════════════════════════
+// PERFORMANCE TAB
+// ═══════════════════════════════════════════════════════════════
+const PerformanceTab = ({
+  performanceSummary,
+  fundPerformance,
+  reportData,
+}) => {
+  const performanceReport = reportData.performanceReport || {};
+
   return (
     <div className="space-y-6">
-      {/* Empty state hint banner */}
-      {!hasData && (
-        <div
-          className="rounded-xl p-4 flex items-center gap-3"
-          style={{
-            background: "rgba(16, 185, 129, 0.05)",
-            border: "1px dashed #10b981",
-          }}
-        >
-          <span className="text-xl">📊</span>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Add your portfolio to track investment performance over time.
-            Currently showing baseline values.
-          </p>
-        </div>
-      )}
-
-      {/* Performance Chart */}
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-subtle)",
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
-        <h3
-          className="text-lg font-semibold mb-4"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Invested vs Current Value Over Time
-        </h3>
-        <PerformanceChart
-          data={data.performanceHistory}
-          height={256}
-          showLegend={true}
-        />
-      </div>
-
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Performance Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div
           className="rounded-xl p-6"
           style={{
-            background: "var(--bg-card)",
+            backgroundColor: "var(--bg-card)",
             border: "1px solid var(--border-subtle)",
-            boxShadow: "var(--shadow-card)",
-            opacity: hasData ? 1 : 0.7,
           }}
         >
           <p
@@ -313,110 +601,65 @@ const PerformanceTab = ({ data, hasData }) => {
           </p>
           <p
             className="mt-2 text-3xl font-bold"
-            style={{ color: hasData ? "#10b981" : "var(--text-tertiary)" }}
+            style={{
+              color:
+                performanceSummary.absoluteReturn >= 0 ? "#22c55e" : "#ef4444",
+            }}
           >
-            {data.absoluteReturn}
+            {formatCurrency(performanceSummary.absoluteReturn)}
           </p>
           <p className="mt-1 text-sm" style={{ color: "var(--text-tertiary)" }}>
-            Total profit earned
+            {performanceSummary.absoluteReturnPercent}% return on investment
           </p>
         </div>
         <div
           className="rounded-xl p-6"
           style={{
-            background: "var(--bg-card)",
+            backgroundColor: "var(--bg-card)",
             border: "1px solid var(--border-subtle)",
-            boxShadow: "var(--shadow-card)",
-            opacity: hasData ? 1 : 0.7,
           }}
         >
           <p
             className="text-sm font-medium"
             style={{ color: "var(--text-secondary)" }}
           >
-            Percentage Return
+            XIRR (Annualized)
           </p>
-          <p
-            className="mt-2 text-3xl font-bold"
-            style={{ color: hasData ? "#10b981" : "var(--text-tertiary)" }}
-          >
-            {data.percentageReturn}
+          <p className="mt-2 text-3xl font-bold" style={{ color: "#8b5cf6" }}>
+            {performanceSummary.xirr || 0}%
           </p>
           <p className="mt-1 text-sm" style={{ color: "var(--text-tertiary)" }}>
-            Return on investment
+            Time-weighted annual return
+          </p>
+        </div>
+        <div
+          className="rounded-xl p-6"
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
+          <p
+            className="text-sm font-medium"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            CAGR
+          </p>
+          <p className="mt-2 text-3xl font-bold" style={{ color: "#3b82f6" }}>
+            {performanceSummary.cagr || 0}%
+          </p>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-tertiary)" }}>
+            Compound annual growth rate
           </p>
         </div>
       </div>
 
-      {/* Explanation Card */}
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%)",
-          border: "1px solid #10b981",
-        }}
-      >
-        <h3
-          className="text-lg font-semibold mb-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          📈 Performance Explained
-        </h3>
-        <p style={{ color: "var(--text-secondary)" }}>
-          This section explains how your investments have grown over time and
-          how market movements impacted returns. The chart above visualizes the
-          journey of your portfolio value compared to your invested capital,
-          helping you understand growth patterns and market cycles.
-        </p>
-      </div>
-    </div>
-  );
-};
-
-// ==================== ALLOCATION TAB ====================
-const AllocationTab = ({ data }) => {
-  // Use funds from context data
-  const fundAllocations = data.funds.map((fund) => ({
-    fund: fund.name,
-    allocation: `${fund.allocation}%`,
-    amount: formatCurrency(fund.invested),
-  }));
-
-  return (
-    <div className="space-y-6">
-      {/* Pie Chart Placeholder */}
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-subtle)",
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
-        <h3
-          className="text-lg font-semibold mb-4"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Asset Allocation
-        </h3>
-        <div className="flex justify-center py-4">
-          <AllocationDonutChart
-            data={data.allocation}
-            size={200}
-            strokeWidth={35}
-            showLegend={true}
-          />
-        </div>
-      </div>
-
-      {/* Fund-wise Allocation Table */}
+      {/* Fund-wise Performance */}
       <div
         className="rounded-xl overflow-hidden"
         style={{
-          background: "var(--bg-card)",
+          backgroundColor: "var(--bg-card)",
           border: "1px solid var(--border-subtle)",
-          boxShadow: "var(--shadow-card)",
         }}
       >
         <div
@@ -427,7 +670,7 @@ const AllocationTab = ({ data }) => {
             className="text-lg font-semibold"
             style={{ color: "var(--text-primary)" }}
           >
-            Fund-wise Allocation
+            Fund-wise Performance
           </h3>
         </div>
         <div className="overflow-x-auto">
@@ -441,55 +684,75 @@ const AllocationTab = ({ data }) => {
                   Fund Name
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  Allocation
+                  Invested
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  Amount
+                  Current
+                </th>
+                <th
+                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Returns
+                </th>
+                <th
+                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  XIRR
                 </th>
               </tr>
             </thead>
             <tbody>
-              {fundAllocations.map((fund, index) => (
+              {fundPerformance.map((fund, index) => (
                 <tr
                   key={index}
                   style={{
                     borderBottom:
-                      index !== fundAllocations.length - 1
+                      index !== fundPerformance.length - 1
                         ? "1px solid var(--border-subtle)"
                         : "none",
                   }}
-                  className="hover:opacity-80"
                 >
                   <td
                     className="px-6 py-4 text-sm font-medium"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    {fund.fund}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <span
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, rgba(147, 51, 234, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%)",
-                        color: "var(--accent-purple)",
-                        border: "1px solid var(--accent-purple)",
-                      }}
-                    >
-                      {fund.allocation}
-                    </span>
+                    {fund.fundName}
                   </td>
                   <td
-                    className="px-6 py-4 text-sm"
+                    className="px-6 py-4 text-sm text-right"
                     style={{ color: "var(--text-secondary)" }}
                   >
-                    {fund.amount}
+                    {formatCurrency(fund.totalInvested)}
+                  </td>
+                  <td
+                    className="px-6 py-4 text-sm text-right"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {formatCurrency(fund.currentValue)}
+                  </td>
+                  <td
+                    className="px-6 py-4 text-sm text-right font-semibold"
+                    style={{
+                      color:
+                        fund.absoluteReturnPercent >= 0 ? "#22c55e" : "#ef4444",
+                    }}
+                  >
+                    {fund.absoluteReturnPercent >= 0 ? "+" : ""}
+                    {fund.absoluteReturnPercent}%
+                  </td>
+                  <td
+                    className="px-6 py-4 text-sm text-right"
+                    style={{ color: "#8b5cf6" }}
+                  >
+                    {fund.xirr}%
                   </td>
                 </tr>
               ))}
@@ -498,359 +761,421 @@ const AllocationTab = ({ data }) => {
         </div>
       </div>
 
-      {/* Explanation Block */}
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)",
-          border: "1px solid var(--accent-blue)",
-        }}
-      >
-        <h3
-          className="text-lg font-semibold mb-2"
-          style={{ color: "var(--text-primary)" }}
+      {/* Performance Period */}
+      {performanceReport.period && (
+        <div
+          className="rounded-xl p-4"
+          style={{
+            backgroundColor: "var(--bg-input)",
+            border: "1px solid var(--border-subtle)",
+          }}
         >
-          🎯 Allocation Breakdown
-        </h3>
-        <p style={{ color: "var(--text-secondary)" }}>
-          This breakdown helps you understand capital distribution across assets
-          and funds. Proper allocation ensures diversification, balancing risk
-          and return potential across different market segments and investment
-          styles.
-        </p>
-      </div>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            📅 Performance Period:{" "}
+            <strong>{performanceReport.period.start}</strong> to{" "}
+            <strong>{performanceReport.period.end}</strong>
+          </p>
+        </div>
+      )}
     </div>
   );
 };
 
-// ==================== RISK TAB ====================
-const RiskTab = ({ data }) => {
-  const getRiskStyles = (level) => {
-    switch (level) {
-      case "Low":
-        return {
-          background: "rgba(16, 185, 129, 0.1)",
-          color: "#10b981",
-          border: "2px solid #10b981",
-        };
-      case "Moderate":
-        return {
-          background: "rgba(245, 158, 11, 0.1)",
-          color: "#f59e0b",
-          border: "2px solid #f59e0b",
-        };
-      case "High":
-        return {
-          background: "rgba(239, 68, 68, 0.1)",
-          color: "#ef4444",
-          border: "2px solid #ef4444",
-        };
-      default:
-        return {
-          background: "var(--bg-input)",
-          color: "var(--text-primary)",
-          border: "2px solid var(--border-medium)",
-        };
-    }
-  };
-
+// ═══════════════════════════════════════════════════════════════
+// ALLOCATION TAB
+// ═══════════════════════════════════════════════════════════════
+const AllocationTab = ({
+  assetAllocation,
+  categoryDistribution,
+  marketCapExposure,
+  sectorExposure,
+  fundPerformance,
+}) => {
   return (
     <div className="space-y-6">
-      {/* Risk Indicator Card */}
+      {/* Asset Allocation Chart */}
       <div
         className="rounded-xl p-6"
         style={{
-          background: "var(--bg-card)",
+          backgroundColor: "var(--bg-card)",
           border: "1px solid var(--border-subtle)",
-          boxShadow: "var(--shadow-card)",
         }}
       >
         <h3
           className="text-lg font-semibold mb-4"
           style={{ color: "var(--text-primary)" }}
         >
-          Portfolio Risk Level
+          Asset Allocation
         </h3>
-        <div className="flex items-center space-x-4">
-          <div
-            className="px-6 py-4 rounded-xl"
-            style={getRiskStyles(data.riskLevel)}
-          >
-            <p className="text-3xl font-bold">{data.riskLevel}</p>
-          </div>
-          <div className="flex-1">
-            <div className="flex space-x-2">
-              <div
-                className="flex-1 h-3 rounded-full"
-                style={{ background: "#10b981" }}
-              ></div>
-              <div
-                className="flex-1 h-3 rounded-full"
-                style={{ background: "#f59e0b" }}
-              ></div>
-              <div
-                className="flex-1 h-3 rounded-full"
-                style={{ background: "var(--border-subtle)" }}
-              ></div>
-            </div>
-            <div
-              className="flex justify-between mt-1 text-xs"
-              style={{ color: "var(--text-tertiary)" }}
-            >
-              <span>Low</span>
-              <span>Moderate</span>
-              <span>High</span>
-            </div>
-          </div>
+        <div className="flex justify-center py-4">
+          <AllocationDonutChart
+            data={assetAllocation}
+            size={200}
+            strokeWidth={35}
+            showLegend={true}
+          />
         </div>
       </div>
 
-      {/* Scenario Explanation */}
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-subtle)",
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
-        <h3
-          className="text-lg font-semibold mb-4"
-          style={{ color: "var(--text-primary)" }}
+      {/* Category & Market Cap */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Category Distribution */}
+        <div
+          className="rounded-xl p-6"
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border-subtle)",
+          }}
         >
-          📉 Market Correction Impact Scenario
-        </h3>
-        <div className="space-y-4">
-          <div
-            className="p-4 rounded-lg"
-            style={{
-              background: "rgba(239, 68, 68, 0.1)",
-              border: "1px solid #ef4444",
-            }}
+          <h3
+            className="text-lg font-semibold mb-4"
+            style={{ color: "var(--text-primary)" }}
           >
-            <p className="font-medium" style={{ color: "#ef4444" }}>
-              If market falls by 20%
-            </p>
-            <p className="mt-1 text-sm" style={{ color: "#f87171" }}>
-              Your portfolio may decline by approximately{" "}
-              {data.riskScenarios
-                ? formatCurrency(
-                    data.riskScenarios.marketFall20.potentialLossMin
-                  )
-                : "₹0"}{" "}
-              -{" "}
-              {data.riskScenarios
-                ? formatCurrency(
-                    data.riskScenarios.marketFall20.potentialLossMax
-                  )
-                : "₹0"}
-            </p>
-          </div>
-          <div
-            className="p-4 rounded-lg"
-            style={{
-              background: "rgba(245, 158, 11, 0.1)",
-              border: "1px solid #f59e0b",
-            }}
-          >
-            <p className="font-medium" style={{ color: "#f59e0b" }}>
-              If market falls by 10%
-            </p>
-            <p className="mt-1 text-sm" style={{ color: "#fbbf24" }}>
-              Your portfolio may decline by approximately{" "}
-              {data.riskScenarios
-                ? formatCurrency(
-                    data.riskScenarios.marketFall10.potentialLossMin
-                  )
-                : "₹0"}{" "}
-              -{" "}
-              {data.riskScenarios
-                ? formatCurrency(
-                    data.riskScenarios.marketFall10.potentialLossMax
-                  )
-                : "₹0"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Explanation Block */}
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(251, 191, 36, 0.1) 100%)",
-          border: "1px solid #f59e0b",
-        }}
-      >
-        <h3
-          className="text-lg font-semibold mb-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          ⚠️ Understanding Risk
-        </h3>
-        <p style={{ color: "var(--text-secondary)" }}>
-          Risk is evaluated based on allocation and historical volatility
-          assumptions. Your current allocation to mid-cap and small-cap funds
-          increases portfolio volatility, but also provides higher growth
-          potential over the long term.
-        </p>
-      </div>
-    </div>
-  );
-};
-
-// ==================== OVERLAP & CONCENTRATION TAB ====================
-const OverlapTab = ({ data }) => {
-  const stockOverlap = data.stockOverlap || [];
-  const sectorConcentration = data.sectorConcentration || [];
-
-  const getSeverityStyles = (severity) => {
-    switch (severity) {
-      case "high":
-        return {
-          background: "rgba(239, 68, 68, 0.1)",
-          border: "1px solid #ef4444",
-          dotColor: "#ef4444",
-          textColor: "#ef4444",
-          subTextColor: "#f87171",
-        };
-      case "moderate":
-        return {
-          background: "rgba(245, 158, 11, 0.1)",
-          border: "1px solid #f59e0b",
-          dotColor: "#f59e0b",
-          textColor: "#f59e0b",
-          subTextColor: "#fbbf24",
-        };
-      default:
-        return {
-          background: "rgba(34, 197, 94, 0.1)",
-          border: "1px solid #22c55e",
-          dotColor: "#22c55e",
-          textColor: "#22c55e",
-          subTextColor: "#4ade80",
-        };
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Overlap Visualization */}
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-subtle)",
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
-        <h3
-          className="text-lg font-semibold mb-4"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Stock Overlap Analysis
-        </h3>
-        <OverlapVisualization
-          stockOverlap={stockOverlap}
-          totalFunds={data.numberOfFunds}
-        />
-      </div>
-
-      {/* Explanation Card */}
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)",
-          border: "1px solid #6366f1",
-        }}
-      >
-        <h3
-          className="text-lg font-semibold mb-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          🔍 Overlap Explained
-        </h3>
-        <p style={{ color: "var(--text-secondary)" }}>
-          Multiple funds may hold similar stocks, reducing diversification
-          benefits. For example, if three of your funds hold HDFC Bank, your
-          actual exposure to that stock is higher than it appears in any single
-          fund.
-        </p>
-      </div>
-
-      {/* Concentration Warning */}
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-subtle)",
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
-        <h3
-          className="text-lg font-semibold mb-4"
-          style={{ color: "var(--text-primary)" }}
-        >
-          ⚡ Concentration Warnings
-        </h3>
-        <div className="space-y-3">
-          {stockOverlap.map((item, index) => {
-            const styles = getSeverityStyles(item.severity);
-            return (
-              <div
-                key={index}
-                className="flex items-start p-4 rounded-lg"
-                style={{
-                  background: styles.background,
-                  border: styles.border,
-                }}
-              >
-                <span className="mr-3" style={{ color: styles.dotColor }}>
-                  ●
-                </span>
-                <div>
-                  <p
-                    className="font-medium"
-                    style={{ color: styles.textColor }}
+            Category Distribution
+          </h3>
+          <div className="space-y-3">
+            {Object.entries(categoryDistribution).map(
+              ([category, percentage]) => (
+                <div key={category}>
+                  <div className="flex justify-between mb-1">
+                    <span
+                      className="text-sm"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {category}
+                    </span>
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {percentage}%
+                    </span>
+                  </div>
+                  <div
+                    className="h-2 rounded-full overflow-hidden"
+                    style={{ backgroundColor: "var(--border-subtle)" }}
                   >
-                    {item.stock} -{" "}
-                    {item.severity.charAt(0).toUpperCase() +
-                      item.severity.slice(1)}{" "}
-                    Concentration
-                  </p>
-                  <p className="text-sm" style={{ color: styles.subTextColor }}>
-                    Present in {item.fundsHolding} out of {item.totalFunds}{" "}
-                    funds • Combined exposure: {item.combinedExposure}%
-                  </p>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${percentage}%`,
+                        background:
+                          "linear-gradient(to right, var(--accent-purple), var(--accent-blue))",
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Market Cap Exposure */}
+        <div
+          className="rounded-xl p-6"
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
+          <h3
+            className="text-lg font-semibold mb-4"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Market Cap Exposure
+          </h3>
+          <div className="space-y-3">
+            {Object.entries(marketCapExposure).map(([cap, percentage]) => (
+              <div key={cap}>
+                <div className="flex justify-between mb-1">
+                  <span
+                    className="text-sm"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {cap}
+                  </span>
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {percentage}%
+                  </span>
+                </div>
+                <div
+                  className="h-2 rounded-full overflow-hidden"
+                  style={{ backgroundColor: "var(--border-subtle)" }}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${percentage}%`,
+                      background: cap.includes("Large")
+                        ? "#3b82f6"
+                        : cap.includes("Mid")
+                        ? "#8b5cf6"
+                        : "#f59e0b",
+                    }}
+                  />
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Sector Concentration Chart */}
-      <div
-        className="rounded-xl p-6"
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-subtle)",
-          boxShadow: "var(--shadow-card)",
-        }}
-      >
-        <h3
-          className="text-lg font-semibold mb-4"
-          style={{ color: "var(--text-primary)" }}
+      {/* Sector Exposure */}
+      {Object.keys(sectorExposure).length > 0 && (
+        <div
+          className="rounded-xl p-6"
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border-subtle)",
+          }}
         >
-          Sector Concentration
-        </h3>
-        <SectorConcentrationChart data={sectorConcentration} />
-      </div>
+          <h3
+            className="text-lg font-semibold mb-4"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Sector Exposure
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(sectorExposure)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 8)
+              .map(([sector, percentage]) => (
+                <div
+                  key={sector}
+                  className="p-3 rounded-lg text-center"
+                  style={{
+                    backgroundColor: "var(--bg-input)",
+                    border: "1px solid var(--border-subtle)",
+                  }}
+                >
+                  <p
+                    className="text-lg font-bold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {percentage}%
+                  </p>
+                  <p
+                    className="text-xs"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    {sector}
+                  </p>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+// ═══════════════════════════════════════════════════════════════
+// RISK TAB
+// ═══════════════════════════════════════════════════════════════
+const RiskTab = ({ concentrationRisks, insights, reportData }) => {
+  const risks = insights?.risks || [];
+  const warnings = reportData?.warnings || [];
+
+  return (
+    <div className="space-y-6">
+      {/* Concentration Risks */}
+      {concentrationRisks.length > 0 && (
+        <div
+          className="rounded-xl p-6"
+          style={{
+            backgroundColor: "rgba(239, 68, 68, 0.05)",
+            border: "1px solid rgba(239, 68, 68, 0.2)",
+          }}
+        >
+          <h3
+            className="text-lg font-semibold mb-4 flex items-center gap-2"
+            style={{ color: "#ef4444" }}
+          >
+            <ShieldAlert className="w-5 h-5" />
+            Concentration Risks
+          </h3>
+          <div className="space-y-3">
+            {concentrationRisks.map((risk, index) => (
+              <div
+                key={index}
+                className="p-4 rounded-lg"
+                style={{
+                  backgroundColor: "var(--bg-card)",
+                  border: "1px solid var(--border-subtle)",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4
+                      className="font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {risk.asset || risk.type} Concentration
+                    </h4>
+                    <p
+                      className="text-sm mt-1"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {risk.percentage}% of portfolio is concentrated in{" "}
+                      {risk.asset || risk.type}
+                    </p>
+                  </div>
+                  <span
+                    className="px-3 py-1 rounded-full text-xs font-semibold"
+                    style={{
+                      backgroundColor:
+                        risk.severity === "high"
+                          ? "rgba(239, 68, 68, 0.2)"
+                          : "rgba(245, 158, 11, 0.2)",
+                      color: risk.severity === "high" ? "#ef4444" : "#f59e0b",
+                    }}
+                  >
+                    {risk.severity}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Risk Alerts from Insights */}
+      {risks.length > 0 && (
+        <div
+          className="rounded-xl p-6"
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
+          <h3
+            className="text-lg font-semibold mb-4"
+            style={{ color: "var(--text-primary)" }}
+          >
+            ⚠️ Risk Alerts
+          </h3>
+          <div className="space-y-3">
+            {risks.map((risk, index) => (
+              <div
+                key={index}
+                className="p-4 rounded-lg"
+                style={{
+                  backgroundColor: "var(--bg-input)",
+                  border: "1px solid var(--border-subtle)",
+                }}
+              >
+                <h4
+                  className="font-semibold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {risk.title}
+                </h4>
+                <p
+                  className="text-sm mt-1"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {risk.description}
+                </p>
+                {risk.recommendation && (
+                  <p
+                    className="text-sm mt-2 font-medium"
+                    style={{ color: "var(--accent-purple)" }}
+                  >
+                    💡 {risk.recommendation}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <div
+          className="rounded-xl p-6"
+          style={{
+            backgroundColor: "rgba(245, 158, 11, 0.05)",
+            border: "1px solid rgba(245, 158, 11, 0.2)",
+          }}
+        >
+          <h3
+            className="text-lg font-semibold mb-4"
+            style={{ color: "#f59e0b" }}
+          >
+            ℹ️ Warnings
+          </h3>
+          <ul className="space-y-2">
+            {warnings.map((warning, index) => (
+              <li
+                key={index}
+                className="flex items-start gap-2 text-sm"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                <span className="text-amber-500">•</span>
+                {warning}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* No Risks */}
+      {concentrationRisks.length === 0 && risks.length === 0 && (
+        <div
+          className="rounded-xl p-8 text-center"
+          style={{
+            backgroundColor: "rgba(34, 197, 94, 0.05)",
+            border: "1px solid rgba(34, 197, 94, 0.2)",
+          }}
+        >
+          <div className="text-4xl mb-4">✅</div>
+          <h3
+            className="text-lg font-semibold mb-2"
+            style={{ color: "#22c55e" }}
+          >
+            No Major Risks Detected
+          </h3>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            Your portfolio appears well-diversified with no significant
+            concentration risks.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// HELPER COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+const SummaryCard = ({ label, value, icon, valueColor }) => (
+  <div
+    className="rounded-xl p-6"
+    style={{
+      backgroundColor: "var(--bg-card)",
+      border: "1px solid var(--border-subtle)",
+    }}
+  >
+    <div className="flex items-center justify-between">
+      <span className="text-2xl">{icon}</span>
+    </div>
+    <p
+      className="mt-4 text-sm font-medium"
+      style={{ color: "var(--text-secondary)" }}
+    >
+      {label}
+    </p>
+    <p
+      className="mt-1 text-2xl font-semibold"
+      style={{ color: valueColor || "var(--text-primary)" }}
+    >
+      {value}
+    </p>
+  </div>
+);
 
 export default ReportTab;

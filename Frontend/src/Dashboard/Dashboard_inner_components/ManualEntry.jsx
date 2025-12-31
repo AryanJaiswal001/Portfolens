@@ -6,32 +6,105 @@ import {
   getPortfolioById,
   updatePortfolio,
 } from "../../service/portfolioService";
+import { Plus, Trash2, Info, ChevronDown, ChevronUp } from "lucide-react";
+
+/**
+ * ManualEntry Page
+ *
+ * Supports multiple SIPs per fund with:
+ * - isOngoing toggle
+ * - startMonth/startYear
+ * - endMonth/endYear (when not ongoing)
+ */
+
+const MONTHS = [
+  { value: 1, label: "January" },
+  { value: 2, label: "February" },
+  { value: 3, label: "March" },
+  { value: 4, label: "April" },
+  { value: 5, label: "May" },
+  { value: 6, label: "June" },
+  { value: 7, label: "July" },
+  { value: 8, label: "August" },
+  { value: 9, label: "September" },
+  { value: 10, label: "October" },
+  { value: 11, label: "November" },
+  { value: 12, label: "December" },
+];
+
+// NAV data availability constants
+// ⚠️ NAV data is only available for Jan 2024 - Dec 2024
+const NAV_START_YEAR = 2024;
+const NAV_START_MONTH = 1;
+const NAV_END_YEAR = 2024;
+const NAV_END_MONTH = 12;
+
+// Restrict years to NAV data range
+const ALLOWED_YEARS = [2024];
+const currentYear = new Date().getFullYear();
+
+const ASSET_TYPES = [
+  "Mutual Fund",
+  "Stock",
+  "ETF",
+  "Bond",
+  "FD",
+  "Gold",
+  "Real Estate",
+  "Other",
+];
 
 export default function ManualEntryPage() {
   const navigate = useNavigate();
-  const { id: portfolioId } = useParams(); // Get portfolio ID from URL if editing
+  const { id: portfolioId } = useParams();
   const isEditMode = Boolean(portfolioId);
 
   // Form state
   const [portfolioName, setPortfolioName] = useState("My Portfolio");
-  const [funds, setFunds] = useState([
-    {
-      id: Date.now(),
-      assetType: "Mutual Fund",
-      assetName: "",
-      investmentStartYear: new Date().getFullYear(),
-      sip: "",
-      lumpsums: [],
-    },
-  ]);
+  const [funds, setFunds] = useState([createEmptyFund()]);
 
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [expandedFunds, setExpandedFunds] = useState({});
 
-  // Fetch existing portfolio data when editing
+  // Create empty fund
+  function createEmptyFund() {
+    return {
+      id: Date.now(),
+      assetType: "Mutual Fund",
+      assetName: "",
+      sips: [createEmptySip()],
+      lumpsums: [],
+    };
+  }
+
+  // Create empty SIP entry - default to NAV start date
+  function createEmptySip() {
+    return {
+      id: Date.now(),
+      amount: "",
+      startMonth: NAV_START_MONTH,
+      startYear: NAV_START_YEAR,
+      isOngoing: true,
+      endMonth: null,
+      endYear: null,
+    };
+  }
+
+  // Create empty lumpsum entry - default to NAV start date
+  function createEmptyLumpsum() {
+    return {
+      id: Date.now(),
+      amount: "",
+      month: NAV_START_MONTH,
+      year: NAV_START_YEAR,
+    };
+  }
+
+  // Fetch existing portfolio when editing
   useEffect(() => {
     if (isEditMode) {
       fetchPortfolio();
@@ -45,21 +118,32 @@ export default function ManualEntryPage() {
       const response = await getPortfolioById(portfolioId);
       const portfolio = response.data.portfolio;
 
-      // Set portfolio name
       setPortfolioName(portfolio.name);
 
-      // Transform funds data to match form state structure
+      // Transform backend data to form state
       const transformedFunds = portfolio.funds.map((fund, index) => ({
-        id: Date.now() + index, // Generate unique IDs for form
+        id: Date.now() + index,
         assetType: fund.assetType,
         assetName: fund.assetName,
-        investmentStartYear: fund.investmentStartYear,
-        sip: fund.sip || "",
-        lumpsums: fund.lumpsums.map((l, i) => ({
-          id: Date.now() + index * 100 + i,
-          year: l.year,
-          amount: l.amount.toString(),
-        })),
+        sips:
+          fund.sips && fund.sips.length > 0
+            ? fund.sips.map((sip, sipIndex) => ({
+                id: Date.now() + index * 1000 + sipIndex,
+                amount: sip.amount?.toString() || "",
+                startMonth: sip.startMonth || 1,
+                startYear: sip.startYear || currentYear,
+                isOngoing: sip.isOngoing !== false,
+                endMonth: sip.endMonth || null,
+                endYear: sip.endYear || null,
+              }))
+            : [createEmptySip()],
+        lumpsums:
+          fund.lumpsums?.map((l, lIndex) => ({
+            id: Date.now() + index * 10000 + lIndex,
+            amount: l.amount?.toString() || "",
+            month: l.month || 1,
+            year: l.year || currentYear,
+          })) || [],
       }));
 
       setFunds(transformedFunds);
@@ -70,71 +154,89 @@ export default function ManualEntryPage() {
     }
   };
 
-  // Asset type options
-  const assetTypes = [
-    "Mutual Fund",
-    "Stock",
-    "ETF",
-    "Bond",
-    "FD",
-    "Gold",
-    "Real Estate",
-    "Other",
-  ];
-
-  // Generate year options (last 35 years)
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 35 }, (_, i) => currentYear - i);
+  // Toggle fund expanded state
+  const toggleFundExpanded = (fundId) => {
+    setExpandedFunds((prev) => ({
+      ...prev,
+      [fundId]: !prev[fundId],
+    }));
+  };
 
   // Add new fund
   const addFund = () => {
-    setFunds([
-      ...funds,
-      {
-        id: Date.now(),
-        assetType: "Mutual Fund",
-        assetName: "",
-        investmentStartYear: currentYear,
-        sip: "",
-        lumpsums: [],
-      },
-    ]);
+    const newFund = createEmptyFund();
+    setFunds([...funds, newFund]);
+    setExpandedFunds((prev) => ({ ...prev, [newFund.id]: true }));
   };
 
   // Remove fund
-  const removeFund = (id) => {
+  const removeFund = (fundId) => {
     if (funds.length > 1) {
-      setFunds(funds.filter((fund) => fund.id !== id));
+      setFunds(funds.filter((f) => f.id !== fundId));
     }
   };
 
   // Update fund field
-  const updateFund = (id, field, value) => {
+  const updateFund = (fundId, field, value) => {
     setFunds(
-      funds.map((fund) => (fund.id === id ? { ...fund, [field]: value } : fund))
+      funds.map((fund) =>
+        fund.id === fundId ? { ...fund, [field]: value } : fund
+      )
     );
-    // Clear error when user makes changes
     if (error) setError("");
   };
 
-  // Add lumpsum to fund
-  const addLumpsum = (fundId) => {
+  // ═══════════════════════════════════════════════════════════════
+  // SIP OPERATIONS
+  // ═══════════════════════════════════════════════════════════════
+  const addSip = (fundId) => {
+    setFunds(
+      funds.map((fund) =>
+        fund.id === fundId
+          ? { ...fund, sips: [...fund.sips, createEmptySip()] }
+          : fund
+      )
+    );
+  };
+
+  const removeSip = (fundId, sipId) => {
+    setFunds(
+      funds.map((fund) =>
+        fund.id === fundId
+          ? { ...fund, sips: fund.sips.filter((s) => s.id !== sipId) }
+          : fund
+      )
+    );
+  };
+
+  const updateSip = (fundId, sipId, field, value) => {
     setFunds(
       funds.map((fund) =>
         fund.id === fundId
           ? {
               ...fund,
-              lumpsums: [
-                ...fund.lumpsums,
-                { id: Date.now(), year: currentYear, amount: "" },
-              ],
+              sips: fund.sips.map((sip) =>
+                sip.id === sipId ? { ...sip, [field]: value } : sip
+              ),
             }
           : fund
       )
     );
   };
 
-  // Remove lumpsum from fund
+  // ═══════════════════════════════════════════════════════════════
+  // LUMPSUM OPERATIONS
+  // ═══════════════════════════════════════════════════════════════
+  const addLumpsum = (fundId) => {
+    setFunds(
+      funds.map((fund) =>
+        fund.id === fundId
+          ? { ...fund, lumpsums: [...fund.lumpsums, createEmptyLumpsum()] }
+          : fund
+      )
+    );
+  };
+
   const removeLumpsum = (fundId, lumpsumId) => {
     setFunds(
       funds.map((fund) =>
@@ -148,7 +250,6 @@ export default function ManualEntryPage() {
     );
   };
 
-  // Update lumpsum
   const updateLumpsum = (fundId, lumpsumId, field, value) => {
     setFunds(
       funds.map((fund) =>
@@ -164,7 +265,9 @@ export default function ManualEntryPage() {
     );
   };
 
-  // Validate form
+  // ═══════════════════════════════════════════════════════════════
+  // VALIDATION
+  // ═══════════════════════════════════════════════════════════════
   const validateForm = () => {
     if (!portfolioName.trim()) {
       setError("Portfolio name is required");
@@ -173,63 +276,138 @@ export default function ManualEntryPage() {
 
     for (let i = 0; i < funds.length; i++) {
       const fund = funds[i];
+
       if (!fund.assetName.trim()) {
         setError(`Fund ${i + 1}: Asset name is required`);
         return false;
       }
-      if (!fund.investmentStartYear) {
-        setError(`Fund ${i + 1}: Investment start year is required`);
-        return false;
-      }
-      // Check if at least SIP or one lumpsum is provided
-      const hasSIP = fund.sip && parseFloat(fund.sip) > 0;
-      const hasLumpsum = fund.lumpsums.some(
+
+      // Validate SIPs - allow SIP-only OR Lumpsum-only portfolios
+      const validSips = fund.sips.filter(
+        (s) => s.amount && parseFloat(s.amount) > 0
+      );
+      const validLumpsums = fund.lumpsums.filter(
         (l) => l.amount && parseFloat(l.amount) > 0
       );
-      if (!hasSIP && !hasLumpsum) {
+
+      // ✅ SIP-only: allowed
+      // ✅ Lumpsum-only: allowed
+      // ❌ Neither: invalid
+      if (validSips.length === 0 && validLumpsums.length === 0) {
         setError(
-          `Fund ${
-            i + 1
-          }: Please enter either SIP or at least one lumpsum amount`
+          `Fund ${i + 1}: Please enter at least one SIP or lumpsum investment`
         );
         return false;
+      }
+
+      // Validate SIP entries
+      for (let j = 0; j < validSips.length; j++) {
+        const sip = validSips[j];
+
+        if (!sip.startMonth || !sip.startYear) {
+          setError(
+            `Fund ${i + 1}, SIP ${j + 1}: Start month and year are required`
+          );
+          return false;
+        }
+
+        // Validate date is within NAV range
+        if (sip.startYear < NAV_START_YEAR || sip.startYear > NAV_END_YEAR) {
+          setError(
+            `Fund ${i + 1}, SIP ${j + 1}: Start year must be ${NAV_START_YEAR} (NAV data range)`
+          );
+          return false;
+        }
+
+        if (!sip.isOngoing) {
+          if (!sip.endMonth || !sip.endYear) {
+            setError(
+              `Fund ${i + 1}, SIP ${
+                j + 1
+              }: End month and year are required for stopped SIPs`
+            );
+            return false;
+          }
+
+          // Validate end is within NAV range
+          if (sip.endYear < NAV_START_YEAR || sip.endYear > NAV_END_YEAR) {
+            setError(
+              `Fund ${i + 1}, SIP ${j + 1}: End year must be ${NAV_END_YEAR} (NAV data range)`
+            );
+            return false;
+          }
+
+          // Validate end > start
+          const startDate = new Date(sip.startYear, sip.startMonth - 1);
+          const endDate = new Date(sip.endYear, sip.endMonth - 1);
+          if (endDate <= startDate) {
+            setError(
+              `Fund ${i + 1}, SIP ${j + 1}: End date must be after start date`
+            );
+            return false;
+          }
+        }
+      }
+
+      // Validate Lumpsum entries - check date range
+      for (let j = 0; j < validLumpsums.length; j++) {
+        const lumpsum = validLumpsums[j];
+
+        if (lumpsum.year < NAV_START_YEAR || lumpsum.year > NAV_END_YEAR) {
+          setError(
+            `Fund ${i + 1}, Lumpsum ${j + 1}: Investment year must be ${NAV_START_YEAR} (NAV data range)`
+          );
+          return false;
+        }
       }
     }
 
     return true;
   };
 
-  // Submit form
+  // ═══════════════════════════════════════════════════════════════
+  // SUBMIT
+  // ═══════════════════════════════════════════════════════════════
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
 
     try {
-      // Prepare data for API (remove client-side IDs)
+      // Transform to API format
       const portfolioData = {
         name: portfolioName.trim(),
         funds: funds.map((fund) => ({
           assetType: fund.assetType,
           assetName: fund.assetName.trim(),
-          investmentStartYear: parseInt(fund.investmentStartYear),
-          sip: fund.sip ? parseFloat(fund.sip) : null,
+          sips: fund.sips
+            .filter((s) => s.amount && parseFloat(s.amount) > 0)
+            .map((s) => ({
+              amount: parseFloat(s.amount),
+              startMonth: parseInt(s.startMonth),
+              startYear: parseInt(s.startYear),
+              isOngoing: s.isOngoing,
+              ...(s.isOngoing
+                ? {}
+                : {
+                    endMonth: parseInt(s.endMonth),
+                    endYear: parseInt(s.endYear),
+                  }),
+            })),
           lumpsums: fund.lumpsums
             .filter((l) => l.amount && parseFloat(l.amount) > 0)
             .map((l) => ({
-              year: parseInt(l.year),
               amount: parseFloat(l.amount),
+              month: parseInt(l.month),
+              year: parseInt(l.year),
             })),
         })),
       };
 
-      // Send to backend - create or update based on mode
       if (isEditMode) {
         await updatePortfolio(portfolioId, portfolioData);
         setSuccess("Portfolio updated successfully!");
@@ -238,26 +416,23 @@ export default function ManualEntryPage() {
         setSuccess("Portfolio saved successfully!");
       }
 
-      // Redirect to portfolio page after short delay
-      setTimeout(() => {
-        navigate("/portfolio");
-      }, 1500);
+      setTimeout(() => navigate("/portfolio"), 1500);
     } catch (err) {
       setError(
-        err.message ||
-          `Failed to ${
-            isEditMode ? "update" : "save"
-          } portfolio. Please try again.`
+        err.message || `Failed to ${isEditMode ? "update" : "save"} portfolio`
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════
   return (
     <PrivateLayout pageTitle={isEditMode ? "Edit Portfolio" : "Manual Entry"}>
       <div className="max-w-3xl mx-auto">
-        {/* Loading state for edit mode */}
+        {/* Loading State */}
         {isLoading && (
           <div className="flex flex-col justify-center items-center py-20">
             <div
@@ -373,235 +548,48 @@ export default function ManualEntryPage() {
               </div>
 
               {/* Funds */}
-              {funds.map((fund, index) => (
-                <div
+              {funds.map((fund, fundIndex) => (
+                <FundCard
                   key={fund.id}
-                  className="p-6 rounded-xl mb-4"
-                  style={{
-                    backgroundColor: "var(--bg-card)",
-                    border: "1px solid var(--border-subtle)",
-                  }}
-                >
-                  <div className="flex justify-between items-center mb-4">
-                    <h3
-                      className="font-semibold"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      Fund {index + 1}
-                    </h3>
-                    {funds.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeFund(fund.id)}
-                        className="text-red-500 hover:text-red-400 text-sm"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Asset Type */}
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        Asset Type
-                      </label>
-                      <select
-                        value={fund.assetType}
-                        onChange={(e) =>
-                          updateFund(fund.id, "assetType", e.target.value)
-                        }
-                        className="w-full p-3 rounded-xl outline-none"
-                        style={{
-                          backgroundColor: "var(--bg-app)",
-                          border: "1px solid var(--border-subtle)",
-                          color: "var(--text-primary)",
-                        }}
-                      >
-                        {assetTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Asset Name */}
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        Asset Name
-                      </label>
-                      <input
-                        type="text"
-                        value={fund.assetName}
-                        onChange={(e) =>
-                          updateFund(fund.id, "assetName", e.target.value)
-                        }
-                        placeholder="e.g., HDFC Flexi Cap Fund"
-                        className="w-full p-3 rounded-xl outline-none"
-                        style={{
-                          backgroundColor: "var(--bg-app)",
-                          border: "1px solid var(--border-subtle)",
-                          color: "var(--text-primary)",
-                        }}
-                      />
-                    </div>
-
-                    {/* Start Year */}
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        Investment Start Year
-                      </label>
-                      <select
-                        value={fund.investmentStartYear}
-                        onChange={(e) =>
-                          updateFund(
-                            fund.id,
-                            "investmentStartYear",
-                            e.target.value
-                          )
-                        }
-                        className="w-full p-3 rounded-xl outline-none"
-                        style={{
-                          backgroundColor: "var(--bg-app)",
-                          border: "1px solid var(--border-subtle)",
-                          color: "var(--text-primary)",
-                        }}
-                      >
-                        {years.map((year) => (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* SIP Amount */}
-                    <div>
-                      <label
-                        className="block text-sm font-medium mb-2"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        Monthly SIP (₹)
-                      </label>
-                      <input
-                        type="number"
-                        value={fund.sip}
-                        onChange={(e) =>
-                          updateFund(fund.id, "sip", e.target.value)
-                        }
-                        placeholder="e.g., 5000"
-                        min="0"
-                        className="w-full p-3 rounded-xl outline-none"
-                        style={{
-                          backgroundColor: "var(--bg-app)",
-                          border: "1px solid var(--border-subtle)",
-                          color: "var(--text-primary)",
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Lumpsums */}
-                  <div className="mt-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <label
-                        className="text-sm font-medium"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        Lumpsum Investments
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => addLumpsum(fund.id)}
-                        className="text-sm hover:opacity-80"
-                        style={{ color: "var(--accent-purple)" }}
-                      >
-                        + Add Lumpsum
-                      </button>
-                    </div>
-
-                    {fund.lumpsums.map((lumpsum) => (
-                      <div key={lumpsum.id} className="flex gap-4 mb-2">
-                        <select
-                          value={lumpsum.year}
-                          onChange={(e) =>
-                            updateLumpsum(
-                              fund.id,
-                              lumpsum.id,
-                              "year",
-                              e.target.value
-                            )
-                          }
-                          className="w-32 p-2 rounded-lg outline-none text-sm"
-                          style={{
-                            backgroundColor: "var(--bg-app)",
-                            border: "1px solid var(--border-subtle)",
-                            color: "var(--text-primary)",
-                          }}
-                        >
-                          {years.map((year) => (
-                            <option key={year} value={year}>
-                              {year}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="number"
-                          value={lumpsum.amount}
-                          onChange={(e) =>
-                            updateLumpsum(
-                              fund.id,
-                              lumpsum.id,
-                              "amount",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Amount (₹)"
-                          min="0"
-                          className="flex-1 p-2 rounded-lg outline-none text-sm"
-                          style={{
-                            backgroundColor: "var(--bg-app)",
-                            border: "1px solid var(--border-subtle)",
-                            color: "var(--text-primary)",
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeLumpsum(fund.id, lumpsum.id)}
-                          className="text-red-500 hover:text-red-400 px-2"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                  fund={fund}
+                  fundIndex={fundIndex}
+                  fundsCount={funds.length}
+                  expanded={expandedFunds[fund.id] !== false}
+                  onToggleExpand={() => toggleFundExpanded(fund.id)}
+                  onUpdateFund={(field, value) =>
+                    updateFund(fund.id, field, value)
+                  }
+                  onRemoveFund={() => removeFund(fund.id)}
+                  onAddSip={() => addSip(fund.id)}
+                  onRemoveSip={(sipId) => removeSip(fund.id, sipId)}
+                  onUpdateSip={(sipId, field, value) =>
+                    updateSip(fund.id, sipId, field, value)
+                  }
+                  onAddLumpsum={() => addLumpsum(fund.id)}
+                  onRemoveLumpsum={(lumpsumId) =>
+                    removeLumpsum(fund.id, lumpsumId)
+                  }
+                  onUpdateLumpsum={(lumpsumId, field, value) =>
+                    updateLumpsum(fund.id, lumpsumId, field, value)
+                  }
+                />
               ))}
 
               {/* Add Fund Button */}
               <button
                 type="button"
                 onClick={addFund}
-                className="w-full p-4 rounded-xl border-2 border-dashed mb-6 hover:opacity-80"
+                className="w-full p-4 rounded-xl border-2 border-dashed mb-6 hover:opacity-80 flex items-center justify-center gap-2"
                 style={{
                   borderColor: "var(--border-subtle)",
                   color: "var(--text-secondary)",
                 }}
               >
-                + Add Another Fund
+                <Plus className="w-5 h-5" />
+                Add Another Fund
               </button>
 
-              {/* Submit Button */}
+              {/* Submit Buttons */}
               <div className="flex gap-4 justify-center">
                 <button
                   type="button"
@@ -641,5 +629,500 @@ export default function ManualEntryPage() {
         )}
       </div>
     </PrivateLayout>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FUND CARD COMPONENT
+// ═══════════════════════════════════════════════════════════════
+function FundCard({
+  fund,
+  fundIndex,
+  fundsCount,
+  expanded,
+  onToggleExpand,
+  onUpdateFund,
+  onRemoveFund,
+  onAddSip,
+  onRemoveSip,
+  onUpdateSip,
+  onAddLumpsum,
+  onRemoveLumpsum,
+  onUpdateLumpsum,
+}) {
+  return (
+    <div
+      className="rounded-xl mb-4 overflow-hidden"
+      style={{
+        backgroundColor: "var(--bg-card)",
+        border: "1px solid var(--border-subtle)",
+      }}
+    >
+      {/* Fund Header */}
+      <div
+        className="p-4 flex items-center justify-between cursor-pointer"
+        style={{
+          borderBottom: expanded ? "1px solid var(--border-subtle)" : "none",
+        }}
+        onClick={onToggleExpand}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold"
+            style={{ backgroundColor: "var(--accent-purple)", color: "white" }}
+          >
+            {fundIndex + 1}
+          </div>
+          <div>
+            <h3
+              className="font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {fund.assetName || `Fund ${fundIndex + 1}`}
+            </h3>
+            <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+              {fund.sips.filter((s) => s.amount).length} SIP(s) •{" "}
+              {fund.lumpsums.filter((l) => l.amount).length} Lumpsum(s)
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {fundsCount > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemoveFund();
+              }}
+              className="p-2 rounded-lg text-red-500 hover:bg-red-500/10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          {expanded ? (
+            <ChevronUp
+              className="w-5 h-5"
+              style={{ color: "var(--text-tertiary)" }}
+            />
+          ) : (
+            <ChevronDown
+              className="w-5 h-5"
+              style={{ color: "var(--text-tertiary)" }}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Fund Content */}
+      {expanded && (
+        <div className="p-6 space-y-6">
+          {/* Basic Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                Asset Type
+              </label>
+              <select
+                value={fund.assetType}
+                onChange={(e) => onUpdateFund("assetType", e.target.value)}
+                className="w-full p-3 rounded-xl outline-none"
+                style={{
+                  backgroundColor: "var(--bg-app)",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                {ASSET_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                Asset Name
+              </label>
+              <input
+                type="text"
+                value={fund.assetName}
+                onChange={(e) => onUpdateFund("assetName", e.target.value)}
+                placeholder="e.g., HDFC Flexi Cap Fund"
+                className="w-full p-3 rounded-xl outline-none"
+                style={{
+                  backgroundColor: "var(--bg-app)",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--text-primary)",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* SIP Section */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <label
+                  className="text-sm font-semibold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  SIP Investments
+                </label>
+                <div className="group relative">
+                  <Info
+                    className="w-4 h-4"
+                    style={{ color: "var(--text-tertiary)" }}
+                  />
+                  <div
+                    className="absolute left-0 bottom-full mb-2 w-64 p-3 rounded-lg text-xs hidden group-hover:block z-10"
+                    style={{
+                      backgroundColor: "var(--bg-card)",
+                      border: "1px solid var(--border-subtle)",
+                      color: "var(--text-secondary)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                    }}
+                  >
+                    You can add multiple SIPs for the same fund if you paused or
+                    restarted investments.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onAddSip}
+                className="text-sm hover:opacity-80 flex items-center gap-1"
+                style={{ color: "var(--accent-purple)" }}
+              >
+                <Plus className="w-4 h-4" />
+                Add SIP
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {fund.sips.map((sip, sipIndex) => (
+                <SipEntry
+                  key={sip.id}
+                  sip={sip}
+                  sipIndex={sipIndex}
+                  sipsCount={fund.sips.length}
+                  onUpdate={(field, value) => onUpdateSip(sip.id, field, value)}
+                  onRemove={() => onRemoveSip(sip.id)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Lumpsum Section */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label
+                className="text-sm font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Lumpsum Investments
+              </label>
+              <button
+                type="button"
+                onClick={onAddLumpsum}
+                className="text-sm hover:opacity-80 flex items-center gap-1"
+                style={{ color: "var(--accent-purple)" }}
+              >
+                <Plus className="w-4 h-4" />
+                Add Lumpsum
+              </button>
+            </div>
+
+            {fund.lumpsums.length === 0 ? (
+              <p
+                className="text-sm py-2"
+                style={{ color: "var(--text-tertiary)" }}
+              >
+                No lumpsum investments added
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {fund.lumpsums.map((lumpsum) => (
+                  <LumpsumEntry
+                    key={lumpsum.id}
+                    lumpsum={lumpsum}
+                    onUpdate={(field, value) =>
+                      onUpdateLumpsum(lumpsum.id, field, value)
+                    }
+                    onRemove={() => onRemoveLumpsum(lumpsum.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SIP ENTRY COMPONENT
+// ═══════════════════════════════════════════════════════════════
+function SipEntry({ sip, sipIndex, sipsCount, onUpdate, onRemove }) {
+  return (
+    <div
+      className="p-4 rounded-lg"
+      style={{
+        backgroundColor: "var(--bg-app)",
+        border: "1px solid var(--border-subtle)",
+      }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <span
+          className="text-xs font-medium"
+          style={{ color: "var(--text-tertiary)" }}
+        >
+          SIP #{sipIndex + 1}
+        </span>
+        {sipsCount > 1 && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-red-500 hover:text-red-400 text-xs"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+        {/* Amount */}
+        <div>
+          <label
+            className="block text-xs mb-1"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            Monthly Amount (₹)
+          </label>
+          <input
+            type="number"
+            value={sip.amount}
+            onChange={(e) => onUpdate("amount", e.target.value)}
+            placeholder="5000"
+            min="0"
+            className="w-full p-2 rounded-lg outline-none text-sm"
+            style={{
+              backgroundColor: "var(--bg-card)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--text-primary)",
+            }}
+          />
+        </div>
+
+        {/* Start Month */}
+        <div>
+          <label
+            className="block text-xs mb-1"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            Start Month
+          </label>
+          <select
+            value={sip.startMonth}
+            onChange={(e) => onUpdate("startMonth", parseInt(e.target.value))}
+            className="w-full p-2 rounded-lg outline-none text-sm"
+            style={{
+              backgroundColor: "var(--bg-card)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--text-primary)",
+            }}
+          >
+            {MONTHS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Start Year */}
+        <div>
+          <label
+            className="block text-xs mb-1"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            Start Year
+          </label>
+          <select
+            value={sip.startYear}
+            onChange={(e) => onUpdate("startYear", parseInt(e.target.value))}
+            className="w-full p-2 rounded-lg outline-none text-sm"
+            style={{
+              backgroundColor: "var(--bg-card)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--text-primary)",
+            }}
+          >
+            {YEARS.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Ongoing Toggle */}
+      <div className="flex items-center gap-3 mb-3">
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={sip.isOngoing}
+            onChange={(e) => onUpdate("isOngoing", e.target.checked)}
+            className="sr-only peer"
+          />
+          <div
+            className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
+            style={{
+              backgroundColor: sip.isOngoing
+                ? "var(--accent-purple)"
+                : "var(--border-medium)",
+            }}
+          />
+        </label>
+        <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+          Ongoing SIP
+        </span>
+      </div>
+
+      {/* Helper Text */}
+      {sip.isOngoing && (
+        <p className="text-xs mb-3" style={{ color: "var(--text-tertiary)" }}>
+          💡 This SIP will be considered ongoing till the current date.
+        </p>
+      )}
+
+      {/* End Date (when not ongoing) */}
+      {!sip.isOngoing && (
+        <div
+          className="grid grid-cols-2 gap-3 mt-3 pt-3"
+          style={{ borderTop: "1px solid var(--border-subtle)" }}
+        >
+          <div>
+            <label
+              className="block text-xs mb-1"
+              style={{ color: "var(--text-tertiary)" }}
+            >
+              End Month
+            </label>
+            <select
+              value={sip.endMonth || ""}
+              onChange={(e) => onUpdate("endMonth", parseInt(e.target.value))}
+              className="w-full p-2 rounded-lg outline-none text-sm"
+              style={{
+                backgroundColor: "var(--bg-card)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-primary)",
+              }}
+            >
+              <option value="">Select</option>
+              {MONTHS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label
+              className="block text-xs mb-1"
+              style={{ color: "var(--text-tertiary)" }}
+            >
+              End Year
+            </label>
+            <select
+              value={sip.endYear || ""}
+              onChange={(e) => onUpdate("endYear", parseInt(e.target.value))}
+              className="w-full p-2 rounded-lg outline-none text-sm"
+              style={{
+                backgroundColor: "var(--bg-card)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-primary)",
+              }}
+            >
+              <option value="">Select</option>
+              {YEARS.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LUMPSUM ENTRY COMPONENT
+// ═══════════════════════════════════════════════════════════════
+function LumpsumEntry({ lumpsum, onUpdate, onRemove }) {
+  return (
+    <div className="flex gap-3 items-center">
+      <select
+        value={lumpsum.month}
+        onChange={(e) => onUpdate("month", parseInt(e.target.value))}
+        className="w-28 p-2 rounded-lg outline-none text-sm"
+        style={{
+          backgroundColor: "var(--bg-app)",
+          border: "1px solid var(--border-subtle)",
+          color: "var(--text-primary)",
+        }}
+      >
+        {MONTHS.map((m) => (
+          <option key={m.value} value={m.value}>
+            {m.label.slice(0, 3)}
+          </option>
+        ))}
+      </select>
+      <select
+        value={lumpsum.year}
+        onChange={(e) => onUpdate("year", parseInt(e.target.value))}
+        className="w-24 p-2 rounded-lg outline-none text-sm"
+        style={{
+          backgroundColor: "var(--bg-app)",
+          border: "1px solid var(--border-subtle)",
+          color: "var(--text-primary)",
+        }}
+      >
+        {YEARS.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+      <input
+        type="number"
+        value={lumpsum.amount}
+        onChange={(e) => onUpdate("amount", e.target.value)}
+        placeholder="Amount (₹)"
+        min="0"
+        className="flex-1 p-2 rounded-lg outline-none text-sm"
+        style={{
+          backgroundColor: "var(--bg-app)",
+          border: "1px solid var(--border-subtle)",
+          color: "var(--text-primary)",
+        }}
+      />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="text-red-500 hover:text-red-400 p-2"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </div>
   );
 }

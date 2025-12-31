@@ -28,14 +28,33 @@ export default function PortfolioCard({ portfolio, onDelete, isDeleting }) {
   const [showDetails, setShowDetails] = useState(false);
 
   // Extract stats from portfolio data (no calculations)
+  // Support both old (f.sip) and new (f.sips array) SIP formats
   const stats = {
     fundsCount: portfolio.funds?.length || 0,
-    sipsCount: portfolio.funds?.filter((f) => f.sip && f.sip > 0).length || 0,
+    sipsCount:
+      portfolio.funds?.reduce((acc, f) => {
+        // New format: sips array
+        if (f.sips && Array.isArray(f.sips)) {
+          return acc + f.sips.filter((s) => s.amount > 0).length;
+        }
+        // Old format: single sip value
+        if (f.sip && f.sip > 0) return acc + 1;
+        return acc;
+      }, 0) || 0,
     lumpsumCount:
       portfolio.funds?.reduce((acc, f) => acc + (f.lumpsums?.length || 0), 0) ||
       0,
     earliestYear: portfolio.funds?.length
-      ? Math.min(...portfolio.funds.map((f) => f.investmentStartYear))
+      ? Math.min(
+          ...portfolio.funds.map((f) => {
+            // New format: get earliest from sips array
+            if (f.sips && Array.isArray(f.sips) && f.sips.length > 0) {
+              return Math.min(...f.sips.map((s) => s.startYear || Infinity));
+            }
+            // Old format: investmentStartYear
+            return f.investmentStartYear || Infinity;
+          })
+        )
       : null,
   };
 
@@ -92,8 +111,6 @@ export default function PortfolioCard({ portfolio, onDelete, isDeleting }) {
           boxShadow: "var(--shadow-card)",
         }}
       >
-        
-
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1 min-w-0">
@@ -345,6 +362,46 @@ function PortfolioDetailsModal({
     return `₹${amount.toLocaleString("en-IN")}`;
   };
 
+  // Format month number to short month name
+  const formatMonth = (monthNum) => {
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    return months[(monthNum || 1) - 1] || "Jan";
+  };
+
+  // Format SIP summary string
+  const formatSipSummary = (sip) => {
+    const amount = formatCurrency(sip.amount);
+    const startDate = `${formatMonth(sip.startMonth)} ${sip.startYear}`;
+
+    if (sip.isOngoing !== false) {
+      return `${amount}/month (Ongoing since ${startDate})`;
+    } else {
+      const endDate = `${formatMonth(sip.endMonth)} ${sip.endYear}`;
+      return `${amount}/month (${startDate} – ${endDate})`;
+    }
+  };
+
+  // Get earliest investment year for a fund
+  const getStartYear = (fund) => {
+    if (fund.sips && Array.isArray(fund.sips) && fund.sips.length > 0) {
+      return Math.min(...fund.sips.map((s) => s.startYear || Infinity));
+    }
+    return fund.investmentStartYear;
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -471,7 +528,7 @@ function PortfolioDetailsModal({
                       className="text-sm"
                       style={{ color: "var(--text-tertiary)" }}
                     >
-                      {fund.assetType} • Started {fund.investmentStartYear}
+                      {fund.assetType} • Started {getStartYear(fund)}
                     </p>
                   </div>
                   <span
@@ -485,27 +542,55 @@ function PortfolioDetailsModal({
                   </span>
                 </div>
 
-                <div className="flex flex-wrap gap-3 text-sm">
-                  {fund.sip && fund.sip > 0 && (
+                {/* SIP Details - New format (sips array) */}
+                {fund.sips &&
+                  Array.isArray(fund.sips) &&
+                  fund.sips.length > 0 && (
+                    <div className="space-y-1.5 mb-2">
+                      {fund.sips
+                        .filter((s) => s.amount > 0)
+                        .map((sip, sipIndex) => (
+                          <div
+                            key={sipIndex}
+                            className="flex items-center gap-2 text-sm"
+                            style={{
+                              color:
+                                sip.isOngoing !== false
+                                  ? "var(--accent-green)"
+                                  : "var(--text-secondary)",
+                            }}
+                          >
+                            <TrendingUp className="w-3.5 h-3.5" />
+                            <span>{formatSipSummary(sip)}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+
+                {/* SIP Details - Old format (single sip value) */}
+                {(!fund.sips || !Array.isArray(fund.sips)) &&
+                  fund.sip &&
+                  fund.sip > 0 && (
                     <div
-                      className="flex items-center gap-1"
+                      className="flex items-center gap-1 text-sm mb-2"
                       style={{ color: "var(--accent-green)" }}
                     >
                       <TrendingUp className="w-3.5 h-3.5" />
                       SIP: {formatCurrency(fund.sip)}/mo
                     </div>
                   )}
-                  {fund.lumpsums?.length > 0 && (
-                    <div
-                      className="flex items-center gap-1"
-                      style={{ color: "var(--accent-blue)" }}
-                    >
-                      <Layers className="w-3.5 h-3.5" />
-                      {fund.lumpsums.length}{" "}
-                      {fund.lumpsums.length === 1 ? "Lumpsum" : "Lumpsums"}
-                    </div>
-                  )}
-                </div>
+
+                {/* Lumpsum count */}
+                {fund.lumpsums?.length > 0 && (
+                  <div
+                    className="flex items-center gap-1 text-sm"
+                    style={{ color: "var(--accent-blue)" }}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    {fund.lumpsums.length}{" "}
+                    {fund.lumpsums.length === 1 ? "Lumpsum" : "Lumpsums"}
+                  </div>
+                )}
 
                 {/* Show lumpsum details */}
                 {fund.lumpsums?.length > 0 && (
@@ -526,7 +611,8 @@ function PortfolioDetailsModal({
                             color: "var(--text-secondary)",
                           }}
                         >
-                          {ls.year}: {formatCurrency(ls.amount)}
+                          {formatMonth(ls.month)} {ls.year}:{" "}
+                          {formatCurrency(ls.amount)}
                         </span>
                       ))}
                     </div>
