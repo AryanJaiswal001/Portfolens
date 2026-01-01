@@ -13,6 +13,15 @@ import {
   exchangeOAuthToken,
 } from "../controllers/oauth.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
+import { authRateLimiter } from "../middleware/security.middleware.js";
+import {
+  validate,
+  registerSchema,
+  loginSchema,
+  updateProfileSchema,
+  changePasswordSchema,
+  oauthTokenSchema,
+} from "../middleware/validation.schemas.js";
 
 /**
  * Auth Routes
@@ -33,11 +42,12 @@ import { protect } from "../middleware/auth.middleware.js";
 const router = express.Router();
 
 // ========================
-// LOCAL AUTH ROUTES
+// LOCAL AUTH ROUTES (with rate limiting)
 // ========================
 
-router.post("/register", register);
-router.post("/login", login);
+router.post("/register", authRateLimiter, validate(registerSchema), register);
+
+router.post("/login", authRateLimiter, validate(loginSchema), login);
 
 // ========================
 // GOOGLE OAUTH ROUTES
@@ -50,6 +60,7 @@ router.post("/login", login);
  */
 router.get(
   "/google",
+  authRateLimiter,
   passport.authenticate("google", {
     scope: ["profile", "email"],
     prompt: "select_account", // Always show account picker
@@ -86,14 +97,24 @@ router.get("/google/failure", oauthFailure);
  * - Google One Tap sign-in
  * - Frontend-initiated OAuth popup
  */
-router.post("/oauth/token", exchangeOAuthToken);
+router.post(
+  "/oauth/token",
+  authRateLimiter,
+  validate(oauthTokenSchema),
+  exchangeOAuthToken
+);
 
 // ========================
 // PROTECTED ROUTES
 // ========================
 
 router.get("/me", protect, getMe);
-router.put("/profile", protect, updateProfile);
-router.put("/password", protect, changePassword);
+router.put("/profile", protect, validate(updateProfileSchema), updateProfile);
+router.put(
+  "/password",
+  protect,
+  validate(changePasswordSchema),
+  changePassword
+);
 
 export default router;

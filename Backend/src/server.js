@@ -1,41 +1,52 @@
-import 'dotenv/config';
-import app from './app.js';
-import connectDB from './config/db.js'
+import "dotenv/config";
+
+// Validate environment variables FIRST (before other imports)
+import { validateEnv } from "./config/env.config.js";
+validateEnv();
+
+import app from "./app.js";
+import connectDB from "./config/db.js";
 
 // Configuration
 const PORT = process.env.PORT || 5000;
-const NODE_ENV = process.env.NODE_ENV || 'development';
+const NODE_ENV = process.env.NODE_ENV || "development";
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('❌ UNCAUGHT EXCEPTION! Shutting down...');
+process.on("uncaughtException", (err) => {
+  console.error("❌ UNCAUGHT EXCEPTION! Shutting down...");
   console.error(err.name, err.message);
-  console.error(err.stack);
+  // Don't log full stack in production
+  if (NODE_ENV === "development") {
+    console.error(err.stack);
+  }
   process.exit(1);
 });
 
 // Start server
 const startServer = async () => {
   try {
-      //Step 1: Connect to DB
-      console.log('Connecting to MongoDB...');
-      await connectDB();
-      
+    //Step 1: Connect to DB
+    console.log("Connecting to MongoDB...");
+    await connectDB();
 
     const server = app.listen(PORT, () => {
-      console.log('\n========================================');
-      console.log('🚀 PortfoLens API Server Started');
-      console.log('========================================');
+      console.log("\n========================================");
+      console.log("🚀 PortfoLens API Server Started");
+      console.log("========================================");
       console.log(`📡 Environment: ${NODE_ENV}`);
       console.log(`🌐 URL: http://localhost:${PORT}`);
       console.log(`💚 Health: http://localhost:${PORT}/api/health`);
-      console.log(`🧪 Test: http://localhost:${PORT}/api/test`);
-      console.log('========================================\n');
+      if (NODE_ENV === "development") {
+        console.log(`🧪 Test: http://localhost:${PORT}/api/test`);
+      }
+      console.log("========================================");
+      console.log("🔒 Security: Rate limiting, helmet, CORS enabled");
+      console.log("========================================\n");
     });
 
     // Handle unhandled promise rejections
-    process.on('unhandledRejection', (err) => {
-      console.error('❌ UNHANDLED REJECTION! Shutting down...');
+    process.on("unhandledRejection", (err) => {
+      console.error("❌ UNHANDLED REJECTION! Shutting down...");
       console.error(err.name, err.message);
       server.close(() => {
         process.exit(1);
@@ -43,15 +54,14 @@ const startServer = async () => {
     });
 
     // Graceful shutdown on SIGTERM
-    process.on('SIGTERM', () => {
-      console.log('👋 SIGTERM received. Shutting down gracefully...');
+    process.on("SIGTERM", () => {
+      console.log("👋 SIGTERM received. Shutting down gracefully...");
       server.close(() => {
-        console.log('💤 Process terminated');
+        console.log("💤 Process terminated");
       });
     });
-
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
+    console.error("❌ Failed to start server:", error.message);
     process.exit(1);
   }
 };

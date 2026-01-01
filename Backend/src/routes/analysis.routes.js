@@ -15,8 +15,15 @@ import {
   getPortfolioSummary,
 } from "../controllers/analysis.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
+import {
+  analysisRateLimiter,
+  validateObjectId,
+} from "../middleware/security.middleware.js";
 
 const router = express.Router();
+
+// Apply analysis-specific rate limiting to all routes
+router.use(analysisRateLimiter);
 
 /**
  * @route   POST /api/analysis/generate
@@ -38,6 +45,11 @@ router.post("/sample", generateSamplePortfolioAnalysis);
  * @desc    Get quick portfolio summary
  * @access  Private
  */
-router.get("/summary/:portfolioId", protect, getPortfolioSummary);
+router.get(
+  "/summary/:portfolioId",
+  protect,
+  validateObjectId("portfolioId"),
+  getPortfolioSummary
+);
 
 export default router;

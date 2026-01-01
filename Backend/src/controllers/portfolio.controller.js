@@ -1,4 +1,9 @@
 import Portfolio from "../models/portfolioModel.js";
+import {
+  MAX_PORTFOLIOS_PER_USER,
+  MAX_FUNDS_PER_PORTFOLIO,
+  LIMIT_ERROR_MESSAGES,
+} from "../config/limits.config.js";
 
 /**
  * Portfolio Controller
@@ -50,7 +55,28 @@ export const createPortfolio = async (req, res) => {
     const { name, funds } = req.body;
     const userId = req.user._id; // From auth middleware - NEVER from request body
 
-    // Validation
+    // ══════════════════════════════════════════════════════════
+    // ABUSE PREVENTION: Check portfolio limit per user
+    // ══════════════════════════════════════════════════════════
+    const existingCount = await Portfolio.countDocuments({ userId });
+    if (existingCount >= MAX_PORTFOLIOS_PER_USER) {
+      return res.status(400).json({
+        success: false,
+        message: LIMIT_ERROR_MESSAGES.MAX_PORTFOLIOS,
+      });
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // ABUSE PREVENTION: Check funds limit per portfolio
+    // ══════════════════════════════════════════════════════════
+    if (funds && funds.length > MAX_FUNDS_PER_PORTFOLIO) {
+      return res.status(400).json({
+        success: false,
+        message: LIMIT_ERROR_MESSAGES.MAX_FUNDS,
+      });
+    }
+
+    // Validation (zod schema handles basic validation, this is business logic)
     if (!funds || !Array.isArray(funds) || funds.length === 0) {
       return res.status(400).json({
         success: false,
