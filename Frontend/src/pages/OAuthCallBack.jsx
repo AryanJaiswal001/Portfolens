@@ -7,49 +7,66 @@ import { useAuth } from "../context/AuthContext";
  *
  * Handles the redirect from Google OAuth.
  * Extracts the token from URL and stores it via AuthContext.
+ * CRITICAL: Only navigates AFTER auth state is fully hydrated.
+ * Redirects to onboarding if first-time user, otherwise to dashboard.
  */
 export default function OAuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setAuthFromToken } = useAuth();
   const [status, setStatus] = useState("Processing...");
+  const [hasProcessed, setHasProcessed] = useState(false);
 
   useEffect(() => {
+    // Prevent double processing
+    if (hasProcessed) return;
+
     const handleCallback = async () => {
+      setHasProcessed(true);
       const token = searchParams.get("token");
       const error = searchParams.get("error");
 
       if (error) {
         setStatus("Authentication failed. Redirecting...");
         setTimeout(() => {
-          navigate("/signin?error=" + error);
+          navigate("/signin?error=" + encodeURIComponent(error), {
+            replace: true,
+          });
         }, 2000);
         return;
       }
 
-      if (token) {
-        try {
-          await setAuthFromToken(token);
-          setStatus("Login successful! Redirecting...");
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 1000);
-        } catch (err) {
-          setStatus("Error processing login. Redirecting...");
-          setTimeout(() => {
-            navigate("/signin?error=token_error");
-          }, 2000);
-        }
-      } else {
+      if (!token) {
         setStatus("No token received. Redirecting...");
         setTimeout(() => {
-          navigate("/signin?error=no_token");
+          navigate("/signin?error=no_token", { replace: true });
+        }, 2000);
+        return;
+      }
+
+      try {
+        setStatus("Verifying credentials...");
+
+        // CRITICAL: Wait for setAuthFromToken to complete and return user
+        const userData = await setAuthFromToken(token);
+
+        setStatus("Login successful! Redirecting...");
+
+        // Always navigate to Choice Screen after login
+        setTimeout(() => {
+          navigate("/onboarding", { replace: true });
+        }, 500);
+      } catch (err) {
+        console.error("OAuth callback error:", err);
+        setStatus("Error processing login. Redirecting...");
+        setTimeout(() => {
+          navigate("/signin?error=token_error", { replace: true });
         }, 2000);
       }
     };
 
     handleCallback();
-  }, [searchParams, navigate, setAuthFromToken]);
+  }, [searchParams, navigate, setAuthFromToken, hasProcessed]);
 
   return (
     <div

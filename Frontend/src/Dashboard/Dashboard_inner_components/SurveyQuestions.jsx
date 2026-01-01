@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const SURVEY_QUESTIONS = [
   {
@@ -94,6 +95,7 @@ const SURVEY_QUESTIONS = [
 
 export default function SurveyQuestions({ onComplete, onSkip }) {
   const navigate = useNavigate();
+  const { completeOnboarding } = useAuth();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [selectedOption, setSelectedOption] = useState(null);
@@ -138,7 +140,7 @@ export default function SurveyQuestions({ onComplete, onSkip }) {
     setSelectedOption(option);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!selectedOption) return;
 
     const updatedAnswers = {
@@ -150,6 +152,13 @@ export default function SurveyQuestions({ onComplete, onSkip }) {
     if (isLastQuestion) {
       // Survey completed
       console.log("Survey completed with answers:", updatedAnswers);
+
+      // Mark onboarding as complete
+      try {
+        await completeOnboarding();
+      } catch (error) {
+        console.error("Failed to complete onboarding:", error);
+      }
 
       // Call custom callback if provided
       if (onComplete) {
@@ -175,8 +184,15 @@ export default function SurveyQuestions({ onComplete, onSkip }) {
     }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     console.log("Survey skipped");
+
+    // Mark onboarding as complete even when skipping
+    try {
+      await completeOnboarding();
+    } catch (error) {
+      console.error("Failed to complete onboarding:", error);
+    }
 
     // Call custom callback if provided
     if (onSkip) {

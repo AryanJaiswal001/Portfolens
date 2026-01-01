@@ -6,6 +6,7 @@ import {
   getMe,
   updateProfile,
   changePassword,
+  completeOnboarding,
 } from "../controllers/auth.controller.js";
 import {
   googleCallback,
@@ -57,10 +58,10 @@ router.post("/login", authRateLimiter, validate(loginSchema), login);
  * @route   GET /api/auth/google
  * @desc    Start Google OAuth flow
  * @access  Public
+ * @note    No rate limiting - OAuth involves redirects and retries
  */
 router.get(
   "/google",
-  authRateLimiter,
   passport.authenticate("google", {
     scope: ["profile", "email"],
     prompt: "select_account", // Always show account picker
@@ -116,5 +117,6 @@ router.put(
   validate(changePasswordSchema),
   changePassword
 );
+router.put("/onboarding/complete", protect, completeOnboarding);
 
 export default router;

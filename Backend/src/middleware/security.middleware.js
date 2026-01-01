@@ -17,6 +17,7 @@ import mongoose from "mongoose";
 /**
  * Global API rate limiter
  * 200 requests per 15 minutes per IP
+ * Skips health checks and OAuth routes
  */
 export const globalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -30,7 +31,27 @@ export const globalRateLimiter = rateLimit({
   },
   skip: (req) => {
     // Skip rate limiting for health checks
-    return req.path === "/api/health";
+    if (req.path === "/api/health") return true;
+    // Skip rate limiting for OAuth routes (involve redirects and retries)
+    if (req.path.startsWith("/auth/google")) return true;
+    return false;
+  },
+});
+
+/**
+ * Strict rate limiter for sensitive operations
+ * 50 requests per 15 minutes per IP
+ * Use for portfolio save, reports, insights, calculations
+ */
+export const strictRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // 50 requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many requests to this endpoint. Please try again later.",
+    retryAfter: "15 minutes",
   },
 });
 
@@ -216,6 +237,7 @@ export const productionErrorHandler = (err, req, res, next) => {
 
 export default {
   globalRateLimiter,
+  strictRateLimiter,
   authRateLimiter,
   analysisRateLimiter,
   sanitizeInput,

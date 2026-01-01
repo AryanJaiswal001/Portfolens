@@ -142,8 +142,12 @@ export function AuthProvider({ children }) {
 
   /**
    * Set auth from OAuth callback (token from URL)
+   * Returns a promise that resolves with user data after hydration
    */
   const setAuthFromToken = async (newToken) => {
+    // Set loading to true during token verification
+    setIsLoading(true);
+
     localStorage.setItem("token", newToken);
     setToken(newToken);
 
@@ -158,9 +162,23 @@ export function AuthProvider({ children }) {
       if (response.ok) {
         const data = await response.json();
         setUser(data.data.user);
+        setIsLoading(false);
+        return data.data.user; // Return user data for caller
+      } else {
+        // Token invalid, clear state
+        localStorage.removeItem("token");
+        setToken(null);
+        setUser(null);
+        setIsLoading(false);
+        throw new Error("Invalid token");
       }
     } catch (error) {
       console.error("Error fetching user:", error);
+      localStorage.removeItem("token");
+      setToken(null);
+      setUser(null);
+      setIsLoading(false);
+      throw error;
     }
   };
 
@@ -171,6 +189,27 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
+  };
+
+  /**
+   * Mark onboarding as complete
+   */
+  const completeOnboarding = async () => {
+    const response = await fetch(`${API_URL}/auth/onboarding/complete`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to complete onboarding");
+    }
+
+    setUser(data.data.user);
+    return data;
   };
 
   /**
@@ -201,11 +240,13 @@ export function AuthProvider({ children }) {
     token,
     isAuthenticated: !!token && !!user,
     isLoading,
+    hasCompletedOnboarding: user?.onboardingComplete ?? false,
     register,
     login,
     loginWithGoogle,
     setAuthFromToken,
     logout,
+    completeOnboarding,
     updateProfile,
   };
 

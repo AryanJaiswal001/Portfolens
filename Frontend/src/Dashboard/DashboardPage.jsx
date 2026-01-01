@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PrivateLayout from "./PrivateLayout";
 import { usePortfolio, PORTFOLIO_MODE } from "../context/PortfolioContext";
 import { useAnalysis } from "../context/AnalysisContext";
+import FullPageLoader from "../components/FullPageLoader";
 import {
   PlusCircle,
   FlaskConical,
@@ -24,17 +25,51 @@ export default function DashboardPage() {
     isUserMode,
     loadSamplePortfolio,
   } = usePortfolio();
-  const { hasAnalysis, generateSampleAnalysis, loading } = useAnalysis();
+  const {
+    hasAnalysis,
+    generateSampleAnalysis,
+    loading: analysisLoading,
+  } = useAnalysis();
+
+  // Local state for handling sample portfolio loading
+  const [isSampleLoading, setIsSampleLoading] = useState(false);
+  const [sampleError, setSampleError] = useState(null);
 
   const handleAddPortfolio = () => {
     navigate("/dashboard/add-investment");
   };
 
+  /**
+   * Handle sample portfolio selection
+   * CRITICAL: Proper async handling to ensure navigation only after state is ready
+   */
   const handleSamplePortfolio = async () => {
-    loadSamplePortfolio();
-    // Generate sample analysis immediately
-    await generateSampleAnalysis();
-    navigate("/insights");
+    try {
+      setIsSampleLoading(true);
+      setSampleError(null);
+
+      // Step 1: Load sample portfolio into context
+      loadSamplePortfolio();
+
+      // Step 2: Generate sample analysis
+      const result = await generateSampleAnalysis();
+
+      if (result.success) {
+        // Step 3: Navigate ONLY after both portfolio and analysis are ready
+        navigate("/insights");
+      } else {
+        // Analysis failed but portfolio is loaded - still navigate
+        setSampleError(
+          "Analysis generation failed, but you can still explore."
+        );
+        navigate("/insights");
+      }
+    } catch (error) {
+      console.error("Sample portfolio error:", error);
+      setSampleError("Failed to load sample portfolio. Please try again.");
+    } finally {
+      setIsSampleLoading(false);
+    }
   };
 
   const handleGoToInsights = () => {
@@ -44,6 +79,11 @@ export default function DashboardPage() {
   const handleGoToReports = () => {
     navigate("/reports");
   };
+
+  // Show full page loader when loading sample portfolio
+  if (isSampleLoading) {
+    return <FullPageLoader message="Loading sample portfolio..." />;
+  }
 
   // ══════════════════════════════════════════════════════════════
   // RENDER: EMPTY MODE (portfolioMode === "NONE")
@@ -115,11 +155,24 @@ export default function DashboardPage() {
 
           {/* Two-Column CTA Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Error Message */}
+            {sampleError && (
+              <div
+                className="col-span-full p-4 rounded-xl mb-2"
+                style={{
+                  backgroundColor: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                }}
+              >
+                <p className="text-red-500 text-sm">{sampleError}</p>
+              </div>
+            )}
+
             {/* PRIMARY CTA: Try Sample Portfolio */}
             <button
               onClick={handleSamplePortfolio}
-              disabled={loading}
-              className="group relative rounded-2xl p-6 text-left transition-all duration-300 hover:scale-[1.02]"
+              disabled={isSampleLoading || analysisLoading}
+              className="group relative rounded-2xl p-6 text-left transition-all duration-300 hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"
               style={{
                 background:
                   "linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)",
@@ -153,7 +206,11 @@ export default function DashboardPage() {
                     insights, reports, and analytics instantly.
                   </p>
                   <div className="flex items-center gap-2 text-white font-medium">
-                    <span>{loading ? "Loading..." : "Start Demo"}</span>
+                    <span>
+                      {isSampleLoading || analysisLoading
+                        ? "Loading..."
+                        : "Start Demo"}
+                    </span>
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>

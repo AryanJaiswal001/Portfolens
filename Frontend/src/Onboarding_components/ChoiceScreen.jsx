@@ -1,12 +1,24 @@
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import ChoiceCard from "./ChoiceCard";
 import { BarChart3, ArrowRight } from "lucide-react";
 import Logo from "../components/Logo";
 import ThemeToggle from "../components/ThemeToggle";
 
 export default function ChoiceScreen() {
+  const navigate = useNavigate();
+  const { completeOnboarding } = useAuth();
 
-  const navigate=useNavigate();
+  const handleGoToDashboard = async () => {
+    try {
+      await completeOnboarding();
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Failed to complete onboarding:", error);
+      // Still navigate even if the API call fails
+      navigate("/dashboard");
+    }
+  };
 
   return (
     <div
@@ -69,16 +81,13 @@ export default function ChoiceScreen() {
           description="Jump straight into your portfolio analytics and start exploring AI-powered insights right away."
           meta="You can take the survey later"
           ctaLabel="Continue"
-          onClick={() => navigate("/dashboard")}
+          onClick={handleGoToDashboard}
         />
       </div>
 
       {/**Footer note*/}
-      <div
-      className="text-center mt-8 max-w-2xl mx-auto">
-        <p
-        className="text-sm"
-        style={{color:"var(--text-tertiary)"}}>
+      <div className="text-center mt-8 max-w-2xl mx-auto">
+        <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
           You can always access the survey later from your account settings
         </p>
       </div>

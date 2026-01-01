@@ -267,3 +267,30 @@ export const changePassword = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Mark onboarding as complete
+ * @route   PUT /api/auth/onboarding/complete
+ * @access  Private
+ */
+export const completeOnboarding = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { onboardingComplete: true },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Onboarding completed",
+      data: { user },
+    });
+  } catch (error) {
+    console.error("Complete onboarding error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Error completing onboarding",
+    });
+  }
+};

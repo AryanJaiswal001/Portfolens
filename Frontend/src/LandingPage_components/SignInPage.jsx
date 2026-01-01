@@ -17,7 +17,7 @@ export default function SignInPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get redirect path from location state or default to dashboard
+  // Get redirect path from location state (used after onboarding completes)
   const from = location.state?.from?.pathname || "/dashboard";
 
   const handleInputChange = (e) => {
@@ -44,8 +44,8 @@ export default function SignInPage() {
 
     try {
       await login(formData.email, formData.password);
-      // Redirect to dashboard or intended page
-      navigate(from, { replace: true });
+      // Always navigate to Choice Screen after login
+      navigate("/onboarding", { replace: true });
     } catch (err) {
       setError(err.message || "Invalid email or password");
     } finally {

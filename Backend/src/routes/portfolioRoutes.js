@@ -7,7 +7,10 @@ import {
   deletePortfolio,
 } from "../controllers/portfolio.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
-import { validateObjectId } from "../middleware/security.middleware.js";
+import {
+  validateObjectId,
+  strictRateLimiter,
+} from "../middleware/security.middleware.js";
 import {
   validate,
   createPortfolioSchema,
@@ -19,12 +22,14 @@ import {
  *
  * All routes are protected - require valid JWT
  * userId is ALWAYS derived from req.user (JWT), never from request body
+ * Strict rate limiting applied to prevent API abuse
  */
 
 const router = express.Router();
 
-// All routes require authentication
+// All routes require authentication and strict rate limiting
 router.use(protect);
+router.use(strictRateLimiter);
 
 // Portfolio CRUD with validation
 router

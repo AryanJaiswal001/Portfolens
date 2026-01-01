@@ -16,9 +16,9 @@ import configureGoogleStrategy from "./utils/OAuth.js";
 
 // Import security middleware
 import {
-  globalRateLimiter,
   sanitizeInput,
   productionErrorHandler,
+  strictRateLimiter,
 } from "./middleware/security.middleware.js";
 
 // Initialize Express app
@@ -59,8 +59,12 @@ app.use(
   })
 );
 
-// Global rate limiting (applied to /api/* routes)
-app.use("/api", globalRateLimiter);
+// NOTE: Rate limiting is applied per-route group, NOT globally
+// - OAuth routes: NO rate limiting (involves redirects and retries)
+// - Auth routes (login/register): authRateLimiter (prevents brute force)
+// - Portfolio routes: strictRateLimiter (prevents abuse)
+// - Analysis routes: analysisRateLimiter (CPU-intensive)
+// - Fund reference routes: strictRateLimiter (prevents abuse)
 
 // NoSQL injection prevention
 app.use(sanitizeInput);
@@ -99,16 +103,18 @@ configureGoogleStrategy();
 // Health check (no auth, no rate limit)
 app.use("/api/health", healthRoutes);
 
-// Authentication (has its own stricter rate limiting)
+// Authentication (rate limiting applied per-route in authroutes.js)
+// - OAuth routes: NO rate limiting
+// - Login/register: authRateLimiter
 app.use("/api/auth", authRoutes);
 
-// Portfolio management (protected)
+// Portfolio management (protected, strict rate limiting applied in portfolioRoutes.js)
 app.use("/api/portfolio", portfolioRoutes);
 
-// Fund reference data (read-only)
-app.use("/api/funds", fundReferenceRoutes);
+// Fund reference data (read-only, strict rate limiting)
+app.use("/api/funds", strictRateLimiter, fundReferenceRoutes);
 
-// Portfolio analysis (has its own rate limiting)
+// Portfolio analysis (has its own rate limiting in analysis.routes.js)
 app.use("/api/analysis", analysisRoutes);
 
 // Test endpoint (dev only)
