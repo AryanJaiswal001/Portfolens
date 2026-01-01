@@ -70,64 +70,10 @@ export default function HeroSection() {
             <ArrowRight className="w-5 h-5" />
           </Link>
 
-          <button
-            className="px-8 py-4 border-2 rounded-lg font-semibold text-lg hover:scale-105 transition-transform"
-            style={{
-              backgroundColor: "var(--bg-button-secondary)",
-              borderColor: "var(--border-medium)",
-              color: "var(--text-primary)",
-            }}
-          >
-            Watch Demo
-          </button>
+         
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-8 mt-20 max-w-2xl mx-auto">
-          <div>
-            <div
-              className="text-4xl font-bold mb-2"
-              style={{
-                background: "var(--gradient-text)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              $2.5B+
-            </div>
-            <div style={{ color: "var(--text-secondary)" }}>Assets Managed</div>
-          </div>
-          <div>
-            <div
-              className="text-4xl font-bold mb-2"
-              style={{
-                background: "var(--gradient-text)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              50K+
-            </div>
-            <div style={{ color: "var(--text-secondary)" }}>Active Users</div>
-          </div>
-          <div>
-            <div
-              className="text-4xl font-bold mb-2"
-              style={{
-                background: "var(--gradient-text)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              98%
-            </div>
-            <div style={{ color: "var(--text-secondary)" }}>Satisfaction</div>
-          </div>
-        </div>
-      </div>
+       </div>
     </section>
   );
 }

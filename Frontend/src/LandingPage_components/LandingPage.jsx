@@ -248,6 +248,14 @@ export default function LandingPage() {
                     text: "Optimize allocation for better risk-adjusted returns",
                     color: "#22c55e",
                   },
+                  {
+                    text: "Receive AI-driven insights tailored to your portfolio",
+                    color: "#3b82f6",
+                  },
+                  {
+                    text: "Make informed decisions with clarity and confidence",
+                    color: "#8b5cf6",
+                  }
                 ].map((benefit, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <div
@@ -261,20 +269,7 @@ export default function LandingPage() {
                 ))}
               </div>
 
-              {/* CTA */}
-              <div className="pt-4">
-                <button
-                  className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all duration-300 hover:scale-105"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, var(--accent-purple), var(--accent-blue))",
-                    boxShadow: "0 4px 20px rgba(147, 51, 234, 0.4)",
-                  }}
-                >
-                  Start Analyzing Free
-                  <ArrowUpRight className="w-5 h-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
-                </button>
-              </div>
+              
             </div>
 
             {/* Right Column - Floating Visual Canvas */}

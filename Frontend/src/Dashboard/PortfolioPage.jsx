@@ -4,11 +4,13 @@ import PrivateLayout from "./PrivateLayout";
 import PortfolioCard from "./Portfolio_Components/PortfolioCard";
 import { getPortfolios, deletePortfolio } from "../service/portfolioService";
 import { useAnalysis } from "../context/AnalysisContext";
+import { usePortfolio } from "../context/PortfolioContext";
 import { Plus, Briefcase, Sparkles } from "lucide-react";
 
 export default function PortfolioPage() {
   const navigate = useNavigate();
   const { generateSampleAnalysis } = useAnalysis();
+  const { loadSamplePortfolio } = usePortfolio();
 
   const [portfolios, setPortfolios] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -175,6 +177,7 @@ export default function PortfolioPage() {
             </button>
             <button
               onClick={async () => {
+                loadSamplePortfolio();
                 await generateSampleAnalysis();
                 navigate("/insights");
               }}
