@@ -4,8 +4,7 @@ dotenv.config();
 
 const connectDB=async()=>{
     try{
-        const MONGODB_URI =
-          process.env.MONGODB_URI || "mongodb://localhost:27017/portfolens";
+        const MONGODB_URI =process.env.MONGODB_URI;
 
           const conn=await mongoose.connect(MONGODB_URI);
 
