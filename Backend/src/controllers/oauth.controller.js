@@ -50,7 +50,7 @@ export const googleCallback = async (req, res) => {
 
     // Also pass token in URL for backward compatibility and immediate use
     // Frontend can extract from URL and store, or rely on cookie
-    res.redirect(`${FRONTEND_URL}/oauth/callback?token=${token}`);
+    res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
   } catch (error) {
     console.error("Google callback error:", error);
     res.redirect(`${FRONTEND_URL}/login?error=oauth_error`);

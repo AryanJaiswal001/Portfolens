@@ -221,4 +221,20 @@ app.use((req, res, next) => {
 // Production-safe error handler
 app.use(productionErrorHandler);
 
+// Global catch-all error handler (MANDATORY - prevents 502)
+// This is the last line of defense against unhandled errors
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+
+  // Prevent sending response if headers already sent
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
+});
+
 export default app;

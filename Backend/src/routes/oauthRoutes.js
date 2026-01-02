@@ -22,19 +22,26 @@ import {
 
 const router = express.Router();
 
+// Frontend URL for error redirects
+const FRONTEND_URL = process.env.CORS_ORIGIN || "http://localhost:5173";
+
 /**
  * @route   GET /auth/google
  * @desc    Start Google OAuth flow
  * @access  Public
  * @note    No rate limiting - OAuth involves redirects and retries
  */
-router.get(
-  "/google",
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-    prompt: "select_account", // Always show account picker
-  })
-);
+router.get("/google", (req, res, next) => {
+  try {
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      prompt: "select_account", // Always show account picker
+    })(req, res, next);
+  } catch (err) {
+    console.error("Google OAuth initiation error:", err);
+    return res.redirect(`${FRONTEND_URL}/signin?error=oauth_init_failed`);
+  }
+});
 
 /**
  * @route   GET /auth/google/callback
@@ -44,10 +51,27 @@ router.get(
  */
 router.get(
   "/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/auth/google/failure",
-  }),
-  googleCallback
+  (req, res, next) => {
+    passport.authenticate("google", {
+      failureRedirect: "/auth/google/failure",
+      session: false,
+    })(req, res, (err) => {
+      if (err) {
+        console.error("Google OAuth authentication error:", err);
+        return res.redirect(`${FRONTEND_URL}/signin?error=oauth_auth_failed`);
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      // Call the controller with error boundary
+      await googleCallback(req, res);
+    } catch (err) {
+      console.error("Google OAuth callback error:", err);
+      return res.redirect(`${FRONTEND_URL}/signin?error=oauth_callback_failed`);
+    }
+  }
 );
 
 /**

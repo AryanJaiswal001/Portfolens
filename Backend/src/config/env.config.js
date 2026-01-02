@@ -11,6 +11,7 @@ const REQUIRED_ENV_VARS = [
   ["MONGO_URI", "MONGODB_URI"], // Accept either
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
+  "GOOGLE_CALLBACK_URL",
 ];
 
 // Optional but recommended in production
