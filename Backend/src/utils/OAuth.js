@@ -12,7 +12,7 @@ import User from "../models/User.js";
  * 4. Passport verify callback finds/creates user in DB
  * 5. User object is passed directly to route handler
  * 6. Route handler generates JWT and redirects to frontend
- * 
+ *
  * IMPORTANT: No session serialization - this is stateless JWT auth
  */
 

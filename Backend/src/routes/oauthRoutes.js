@@ -10,7 +10,7 @@ import {
  *
  * These routes handle browser redirects for OAuth flows.
  * IMPORTANT: This is JWT-only - no express-session dependency.
- * 
+ *
  * Routes:
  * - GET /auth/google - Start Google OAuth flow
  * - GET /auth/google/callback - Google OAuth callback (Google redirects here)
@@ -43,30 +43,36 @@ router.get("/google", (req, res, next) => {
  * @note    JWT-only - no session, user is passed directly from passport
  */
 router.get("/google/callback", (req, res, next) => {
-  passport.authenticate("google", {
-    session: false, // No session - JWT only
-    failureRedirect: "/auth/google/failure",
-  }, async (err, user, info) => {
-    // Handle authentication errors
-    if (err) {
-      console.error("Google OAuth authentication error:", err);
-      return res.redirect(`${FRONTEND_URL}/signin?error=oauth_auth_failed`);
-    }
+  passport.authenticate(
+    "google",
+    {
+      session: false, // No session - JWT only
+      failureRedirect: "/auth/google/failure",
+    },
+    async (err, user, info) => {
+      // Handle authentication errors
+      if (err) {
+        console.error("Google OAuth authentication error:", err);
+        return res.redirect(`${FRONTEND_URL}/signin?error=oauth_auth_failed`);
+      }
 
-    // Handle no user (authentication failed)
-    if (!user) {
-      console.error("Google OAuth: No user returned", info);
-      return res.redirect(`${FRONTEND_URL}/signin?error=oauth_no_user`);
-    }
+      // Handle no user (authentication failed)
+      if (!user) {
+        console.error("Google OAuth: No user returned", info);
+        return res.redirect(`${FRONTEND_URL}/signin?error=oauth_no_user`);
+      }
 
-    try {
-      // Pass user directly to controller - no req.user dependency
-      await googleCallback(req, res, user);
-    } catch (callbackErr) {
-      console.error("Google OAuth callback error:", callbackErr);
-      return res.redirect(`${FRONTEND_URL}/signin?error=oauth_callback_failed`);
+      try {
+        // Pass user directly to controller - no req.user dependency
+        await googleCallback(req, res, user);
+      } catch (callbackErr) {
+        console.error("Google OAuth callback error:", callbackErr);
+        return res.redirect(
+          `${FRONTEND_URL}/signin?error=oauth_callback_failed`
+        );
+      }
     }
-  })(req, res, next);
+  )(req, res, next);
 });
 
 /**
