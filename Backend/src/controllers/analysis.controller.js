@@ -169,6 +169,14 @@ export const getPortfolioSummary = async (req, res) => {
     const { portfolioId } = req.params;
     const userId = req.user._id;
 
+    // Validate portfolioId parameter
+    if (!portfolioId) {
+      return res.status(400).json({
+        success: false,
+        message: "Portfolio ID is required",
+      });
+    }
+
     const portfolio = await Portfolio.findOne({
       _id: portfolioId,
       userId: userId,
@@ -181,26 +189,48 @@ export const getPortfolioSummary = async (req, res) => {
       });
     }
 
+    // Handle empty portfolio case
+    if (!portfolio.funds || portfolio.funds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          portfolioId: portfolio._id,
+          name: portfolio.name,
+          fundCount: 0,
+          sipCount: 0,
+          lumpsumCount: 0,
+          totalInvested: 0,
+          createdAt: portfolio.createdAt,
+          updatedAt: portfolio.updatedAt,
+        },
+        message: "Portfolio has no funds",
+      });
+    }
+
     // Calculate basic summary
     let totalInvested = 0;
     let sipCount = 0;
     let lumpsumCount = 0;
 
     for (const fund of portfolio.funds) {
-      // Sum SIPs
-      if (fund.sips) {
+      // Sum SIPs (safely handle null/undefined)
+      if (fund.sips && Array.isArray(fund.sips)) {
         for (const sip of fund.sips) {
-          sipCount++;
-          const months = calculateSipMonths(sip);
-          totalInvested += sip.amount * months;
+          if (sip && sip.amount > 0) {
+            sipCount++;
+            const months = calculateSipMonths(sip);
+            totalInvested += sip.amount * months;
+          }
         }
       }
 
-      // Sum lumpsums
-      if (fund.lumpsums) {
+      // Sum lumpsums (safely handle null/undefined)
+      if (fund.lumpsums && Array.isArray(fund.lumpsums)) {
         for (const lumpsum of fund.lumpsums) {
-          lumpsumCount++;
-          totalInvested += lumpsum.amount;
+          if (lumpsum && lumpsum.amount > 0) {
+            lumpsumCount++;
+            totalInvested += lumpsum.amount;
+          }
         }
       }
     }
@@ -221,6 +251,14 @@ export const getPortfolioSummary = async (req, res) => {
   } catch (error) {
     console.error("Portfolio summary error:", error);
 
+    // Handle invalid ObjectId
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid portfolio ID format",
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "Failed to get portfolio summary",
@@ -230,8 +268,14 @@ export const getPortfolioSummary = async (req, res) => {
 
 /**
  * Calculate SIP months for summary
+ * Returns 0 if SIP data is invalid
  */
 function calculateSipMonths(sip) {
+  // Validate SIP has required fields
+  if (!sip || !sip.startYear || !sip.startMonth) {
+    return 0;
+  }
+
   const NAV_CUTOFF_YEAR = 2024;
   const NAV_CUTOFF_MONTH = 12;
 
@@ -241,7 +285,18 @@ function calculateSipMonths(sip) {
   if (sip.isOngoing) {
     endDate = new Date(NAV_CUTOFF_YEAR, NAV_CUTOFF_MONTH - 1, 1);
   } else {
-    endDate = new Date(sip.endYear, sip.endMonth - 1, 1);
+    // Validate end date fields for non-ongoing SIPs
+    if (!sip.endYear || !sip.endMonth) {
+      // Default to cutoff if end date not specified
+      endDate = new Date(NAV_CUTOFF_YEAR, NAV_CUTOFF_MONTH - 1, 1);
+    } else {
+      endDate = new Date(sip.endYear, sip.endMonth - 1, 1);
+    }
+  }
+
+  // Ensure start date is not after end date
+  if (startDate > endDate) {
+    return 0;
   }
 
   const months =
