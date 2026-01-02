@@ -28,7 +28,9 @@ export default function OAuthCallback() {
     if (error) {
       setStatus("Authentication failed. Redirecting...");
       setTimeout(() => {
-        navigate("/signin?error=" + encodeURIComponent(error), { replace: true });
+        navigate("/signin?error=" + encodeURIComponent(error), {
+          replace: true,
+        });
       }, 1500);
       return;
     }
@@ -43,7 +45,7 @@ export default function OAuthCallback() {
 
     // Store token in localStorage - NO backend call
     localStorage.setItem("token", token);
-    
+
     // Redirect directly to /onboarding
     setStatus("Login successful! Redirecting...");
     setTimeout(() => {
