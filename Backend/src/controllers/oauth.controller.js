@@ -9,6 +9,16 @@ import { generateToken } from "../utils/jwt.js";
 
 // Frontend URL for redirects
 const FRONTEND_URL = process.env.CORS_ORIGIN || "http://localhost:5173";
+const NODE_ENV = process.env.NODE_ENV || "development";
+
+// Cookie configuration for cross-site auth (Render backend + Vercel frontend)
+const getCookieOptions = () => ({
+  httpOnly: true,
+  secure: NODE_ENV === "production", // HTTPS only in production
+  sameSite: NODE_ENV === "production" ? "none" : "lax", // Cross-site in production
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  path: "/",
+});
 
 /**
  * @desc    Handle Google OAuth callback
@@ -27,8 +37,12 @@ export const googleCallback = async (req, res) => {
     // Generate JWT token
     const token = generateToken(user._id);
 
-    // Redirect to frontend with token
-    // Frontend will extract token from URL and store it
+    // Set JWT as httpOnly cookie for security
+    // Cookie will be sent automatically on subsequent requests
+    res.cookie("auth_token", token, getCookieOptions());
+
+    // Also pass token in URL for backward compatibility and immediate use
+    // Frontend can extract from URL and store, or rely on cookie
     res.redirect(`${FRONTEND_URL}/oauth/callback?token=${token}`);
   } catch (error) {
     console.error("Google callback error:", error);

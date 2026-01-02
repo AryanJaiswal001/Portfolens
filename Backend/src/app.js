@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import passport from "passport";
+import cookieParser from "cookie-parser";
 
 // Import routes
 import healthRoutes from "./routes/health.js";
@@ -109,6 +110,9 @@ if (NODE_ENV === "development") {
 // Body parsing with size limits
 app.use(express.json({ limit: "1mb" })); // Reduced from 10mb
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+
+// Cookie parser (required for auth_token cookie)
+app.use(cookieParser());
 
 // ===================
 // PASSPORT SETUP
