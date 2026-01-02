@@ -5,6 +5,7 @@ import { generateToken } from "../utils/jwt.js";
  * OAuth Controller
  *
  * Handles OAuth callbacks and token generation
+ * IMPORTANT: This is JWT-only - no session dependencies
  */
 
 // Frontend URL for redirects
@@ -24,36 +25,28 @@ const getCookieOptions = () => ({
  * @desc    Handle Google OAuth callback
  * @route   GET /auth/google/callback
  * @access  Public (Google redirects here)
+ * @note    JWT-only - no session, no req.user, no req.logout
+ *          The user object is passed directly from passport verify callback
  */
-export const googleCallback = async (req, res) => {
+export const googleCallback = async (req, res, user) => {
   try {
-    // req.user is set by Passport after successful authentication
-    const user = req.user;
-
+    // User is passed directly from the route handler (from passport callback)
     if (!user) {
-      return res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);
+      return res.redirect(`${FRONTEND_URL}/signin?error=oauth_failed`);
     }
 
-    // Generate JWT token
+    // Generate JWT token using JWT_SECRET
     const token = generateToken(user._id);
 
     // Set JWT as httpOnly cookie for security
-    // Cookie will be sent automatically on subsequent requests
     res.cookie("auth_token", token, getCookieOptions());
 
-    // Destroy OAuth session immediately after issuing JWT
-    // This keeps the app stateless after OAuth handshake completes
-    req.logout(() => {});
-    if (req.session) {
-      req.session.destroy(() => {});
-    }
-
-    // Also pass token in URL for backward compatibility and immediate use
-    // Frontend can extract from URL and store, or rely on cookie
-    res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
+    // Redirect to frontend with token in URL
+    // Frontend extracts token and stores it
+    return res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
   } catch (error) {
     console.error("Google callback error:", error);
-    res.redirect(`${FRONTEND_URL}/login?error=oauth_error`);
+    return res.redirect(`${FRONTEND_URL}/signin?error=oauth_error`);
   }
 };
 
@@ -63,7 +56,7 @@ export const googleCallback = async (req, res) => {
  * @access  Public
  */
 export const oauthFailure = (req, res) => {
-  res.redirect(`${FRONTEND_URL}/login?error=oauth_denied`);
+  return res.redirect(`${FRONTEND_URL}/signin?error=oauth_denied`);
 };
 
 /**

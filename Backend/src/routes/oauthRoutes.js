@@ -9,11 +9,8 @@ import {
  * OAuth Routes (mounted at /auth, NOT /api/auth)
  *
  * These routes handle browser redirects for OAuth flows.
- * They MUST be at /auth/* (not /api/auth/*) because:
- * 1. Google OAuth callback URL must match exactly
- * 2. Browser redirects don't need /api prefix
- * 3. Cleaner separation from JSON API endpoints
- *
+ * IMPORTANT: This is JWT-only - no express-session dependency.
+ * 
  * Routes:
  * - GET /auth/google - Start Google OAuth flow
  * - GET /auth/google/callback - Google OAuth callback (Google redirects here)
@@ -29,50 +26,48 @@ const FRONTEND_URL = process.env.CORS_ORIGIN || "http://localhost:5173";
  * @route   GET /auth/google
  * @desc    Start Google OAuth flow
  * @access  Public
- * @note    No rate limiting - OAuth involves redirects and retries
+ * @note    session: false - we don't use sessions, only JWT
  */
 router.get("/google", (req, res, next) => {
-  try {
-    passport.authenticate("google", {
-      scope: ["profile", "email"],
-      prompt: "select_account", // Always show account picker
-    })(req, res, next);
-  } catch (err) {
-    console.error("Google OAuth initiation error:", err);
-    return res.redirect(`${FRONTEND_URL}/signin?error=oauth_init_failed`);
-  }
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    prompt: "select_account",
+    session: false, // No session - JWT only
+  })(req, res, next);
 });
 
 /**
  * @route   GET /auth/google/callback
  * @desc    Google OAuth callback handler
  * @access  Public (Google redirects here)
- * @note    Uses session for OAuth handshake, then destroys it after issuing JWT
+ * @note    JWT-only - no session, user is passed directly from passport
  */
-router.get(
-  "/google/callback",
-  (req, res, next) => {
-    passport.authenticate("google", {
-      failureRedirect: "/auth/google/failure",
-      session: false,
-    })(req, res, (err) => {
-      if (err) {
-        console.error("Google OAuth authentication error:", err);
-        return res.redirect(`${FRONTEND_URL}/signin?error=oauth_auth_failed`);
-      }
-      next();
-    });
-  },
-  async (req, res) => {
+router.get("/google/callback", (req, res, next) => {
+  passport.authenticate("google", {
+    session: false, // No session - JWT only
+    failureRedirect: "/auth/google/failure",
+  }, async (err, user, info) => {
+    // Handle authentication errors
+    if (err) {
+      console.error("Google OAuth authentication error:", err);
+      return res.redirect(`${FRONTEND_URL}/signin?error=oauth_auth_failed`);
+    }
+
+    // Handle no user (authentication failed)
+    if (!user) {
+      console.error("Google OAuth: No user returned", info);
+      return res.redirect(`${FRONTEND_URL}/signin?error=oauth_no_user`);
+    }
+
     try {
-      // Call the controller with error boundary
-      await googleCallback(req, res);
-    } catch (err) {
-      console.error("Google OAuth callback error:", err);
+      // Pass user directly to controller - no req.user dependency
+      await googleCallback(req, res, user);
+    } catch (callbackErr) {
+      console.error("Google OAuth callback error:", callbackErr);
       return res.redirect(`${FRONTEND_URL}/signin?error=oauth_callback_failed`);
     }
-  }
-);
+  })(req, res, next);
+});
 
 /**
  * @route   GET /auth/google/failure

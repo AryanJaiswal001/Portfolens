@@ -5,12 +5,15 @@ import User from "../models/User.js";
 /**
  * Google OAuth Strategy Configuration
  *
- * Flow:
+ * Flow (JWT-only, no sessions):
  * 1. User clicks "Sign in with Google"
  * 2. Redirected to Google consent screen
- * 3. Google returns user profile
- * 4. We find/create user in our DB
- * 5. Generate JWT and redirect to frontend
+ * 3. Google returns user profile to callback
+ * 4. Passport verify callback finds/creates user in DB
+ * 5. User object is passed directly to route handler
+ * 6. Route handler generates JWT and redirects to frontend
+ * 
+ * IMPORTANT: No session serialization - this is stateless JWT auth
  */
 
 const configureGoogleStrategy = () => {
@@ -97,22 +100,10 @@ const configureGoogleStrategy = () => {
     )
   );
 
-  // Serialize user for session (stores user ID in session)
-  passport.serializeUser((user, done) => {
-    done(null, user._id);
-  });
+  // NOTE: No serializeUser/deserializeUser - we don't use sessions
+  // The user object is passed directly through the callback chain
 
-  // Deserialize user from session (retrieves user from DB)
-  passport.deserializeUser(async (id, done) => {
-    try {
-      const user = await User.findById(id);
-      done(null, user);
-    } catch (error) {
-      done(error, null);
-    }
-  });
-
-  console.log("✅ Google OAuth strategy configured");
+  console.log("✅ Google OAuth strategy configured (JWT-only, no sessions)");
 };
 
 export default configureGoogleStrategy;

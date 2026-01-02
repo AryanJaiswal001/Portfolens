@@ -3,7 +3,6 @@ import helmet from "helmet";
 import morgan from "morgan";
 import passport from "passport";
 import cookieParser from "cookie-parser";
-import session from "express-session";
 
 // Import routes
 import healthRoutes from "./routes/health.js";
@@ -138,30 +137,13 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
 
 // ===================
-// SESSION (for OAuth handshake only)
+// PASSPORT SETUP (JWT-only, no sessions)
 // ===================
-// Session is required for Passport OAuth to maintain state during redirect.
-// After OAuth completes, session is destroyed to keep app stateless (JWT-based).
-app.use(
-  session({
-    secret: process.env.JWT_SECRET || "oauth-session-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: NODE_ENV === "production",
-      sameSite: NODE_ENV === "production" ? "none" : "lax",
-      httpOnly: true,
-      maxAge: 10 * 60 * 1000, // 10 minutes - just enough for OAuth handshake
-    },
-  })
-);
-
-// ===================
-// PASSPORT SETUP
-// ===================
+// NOTE: No express-session middleware - OAuth is completely stateless
+// Passport handles the OAuth handshake, then we issue a JWT immediately
 
 app.use(passport.initialize());
-app.use(passport.session()); // Required for OAuth handshake
+// NOTE: No passport.session() - we use JWT only, no session serialization
 configureGoogleStrategy();
 
 // ===================
