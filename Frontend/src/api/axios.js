@@ -2,18 +2,16 @@
  * Axios API Client
  *
  * Centralized Axios instance for all API calls
- * - Uses VITE_API_BASE_URL environment variable
+ * - Uses centralized API configuration
  * - Enables credentials for cross-origin requests
  * - Can be extended with interceptors for auth, error handling, etc.
  */
 
 import axios from "axios";
+import { API_BASE_URL } from "../config/api.js";
 
-// Base URL from environment variable
-// Only fall back to localhost in development mode - production MUST have VITE_API_BASE_URL set
-const baseURL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV ? "http://localhost:5000/api" : "");
+// Use centralized API configuration
+const baseURL = API_BASE_URL;
 
 /**
  * Configured Axios instance

@@ -6,10 +6,10 @@
  * - Never sends userId (backend extracts from token)
  */
 
-// API base URL - uses environment variable, no hardcoded fallback in production
-const API_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV ? "http://localhost:5000/api" : "");
+import { API_BASE_URL } from "../config/api.js";
+
+// Use centralized API configuration
+const API_URL = API_BASE_URL;
 
 /**
  * Get auth headers with JWT token

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { BACKEND_BASE_URL } from "../config/api.js";
 import Logo from "../components/Logo";
 import ThemeToggle from "../components/ThemeToggle";
 
@@ -71,12 +72,7 @@ export default function SignUpPage() {
   const handleGoogleSignUp = () => {
     // Redirect to backend Google OAuth endpoint
     // OAuth routes are at /auth/* (not /api/auth/*)
-    const backendUrl =
-      import.meta.env.VITE_BACKEND_URL ||
-      (import.meta.env.DEV
-        ? "http://localhost:5000"
-        : "https://portfolens.onrender.com");
-    window.location.href = `${backendUrl}/auth/google`;
+    window.location.href = `${BACKEND_BASE_URL}/auth/google`;
   };
 
   return (
