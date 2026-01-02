@@ -3,7 +3,7 @@
  *
  * Handles HTTP requests for portfolio analysis
  * - POST /api/analysis/generate - Generate full analysis
- * - POST /api/analysis/sample - Generate sample portfolio analysis
+ * - GET|POST /api/analysis/sample - Generate sample portfolio analysis
  *
  * ⚠️ Controllers should NOT contain business logic
  * ⚠️ All logic lives in services
@@ -79,7 +79,7 @@ export const generatePortfolioAnalysis = async (req, res) => {
 
 /**
  * Generate sample portfolio analysis
- * POST /api/analysis/sample
+ * GET|POST /api/analysis/sample
  *
  * Uses predefined sample portfolio data
  * Does not require authentication

@@ -4,6 +4,7 @@
  * API endpoints for portfolio analysis
  *
  * POST   /api/analysis/generate        - Generate full analysis (auth required)
+ * GET    /api/analysis/sample          - Generate sample analysis (no auth)
  * POST   /api/analysis/sample          - Generate sample analysis (no auth)
  * GET    /api/analysis/summary/:id     - Get portfolio summary (auth required)
  */
@@ -34,10 +35,11 @@ router.use(analysisRateLimiter);
 router.post("/generate", protect, generatePortfolioAnalysis);
 
 /**
- * @route   POST /api/analysis/sample
+ * @route   GET|POST /api/analysis/sample
  * @desc    Generate sample portfolio analysis (demo)
  * @access  Public
  */
+router.get("/sample", generateSamplePortfolioAnalysis);
 router.post("/sample", generateSamplePortfolioAnalysis);
 
 /**
