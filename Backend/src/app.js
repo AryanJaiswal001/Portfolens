@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import passport from "passport";
@@ -52,35 +51,58 @@ app.set("trust proxy", 1);
 // Security headers (helmet defaults are production-ready)
 app.use(helmet());
 
-// CORS - Strict whitelist of allowed origins
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, curl) ONLY in development
-      if (!origin) {
-        if (NODE_ENV === "development") {
-          return callback(null, true);
-        }
-        // In production, reject requests without origin header
-        return callback(new Error("CORS: Origin header required"));
-      }
+// Custom Origin enforcement middleware
+// OAuth redirect routes bypass Origin validation (browser redirects don't include Origin)
+// All other routes require strict CORS enforcement
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
 
-      // Check against explicit whitelist
-      if (ALLOWED_ORIGINS.includes(origin)) {
-        return callback(null, true);
-      }
+  const isAuthRoute =
+    req.path.startsWith("/auth") || req.path.startsWith("/api/auth");
 
-      // Reject all other origins
-      console.warn(`CORS blocked origin: ${origin}`);
-      callback(new Error(`CORS: Origin ${origin} not allowed`));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    exposedHeaders: ["X-Total-Count"], // For pagination if needed
-    maxAge: 86400, // Cache preflight for 24 hours
-  })
-);
+  // ✅ Allow OAuth redirects without Origin
+  if (!origin && isAuthRoute) {
+    return next();
+  }
+
+  // Allow requests with no origin in development only
+  if (!origin) {
+    if (NODE_ENV === "development") {
+      return next();
+    }
+    // ❌ Block non-auth requests without Origin in production
+    return res.status(403).json({
+      success: false,
+      message: "CORS: Origin header required",
+    });
+  }
+
+  // ❌ Block unknown origins
+  if (!ALLOWED_ORIGINS.includes(origin)) {
+    console.warn(`CORS blocked origin: ${origin}`);
+    return res.status(403).json({
+      success: false,
+      message: "CORS: Origin not allowed",
+    });
+  }
+
+  // ✅ Set CORS headers for allowed origins
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,DELETE,PATCH,OPTIONS"
+  );
+  res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
+  res.setHeader("Access-Control-Max-Age", "86400");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
 
 // NOTE: Rate limiting is applied per-route group, NOT globally
 // - OAuth routes: NO rate limiting (involves redirects and retries)
