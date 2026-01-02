@@ -26,8 +26,13 @@ import {
 
 dotenv.config();
 
-const MONGO_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/Portfolens";
+const MONGO_URI = process.env.MONGODB_URI;
+
+if (!MONGO_URI) {
+  console.error("❌ MONGODB_URI environment variable is not set");
+  console.error("   Please set MONGODB_URI in your .env file");
+  process.exit(1);
+}
 
 // Test scenarios
 const testScenarios = [
