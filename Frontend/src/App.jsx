@@ -45,6 +45,7 @@ function App() {
                 <Route path="/signin" element={<SignInPage />} />
                 <Route path="/signup" element={<RegisterUser />} />
                 <Route path="/oauth/callback" element={<OAuthCallback />} />
+                <Route path="/auth/callback" element={<OAuthCallback />} />
 
                 {/* ======================== */}
                 {/* PROTECTED ROUTES */}
