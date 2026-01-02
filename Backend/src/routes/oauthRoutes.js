@@ -40,11 +40,11 @@ router.get(
  * @route   GET /auth/google/callback
  * @desc    Google OAuth callback handler
  * @access  Public (Google redirects here)
+ * @note    Uses session for OAuth handshake, then destroys it after issuing JWT
  */
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    session: false,
     failureRedirect: "/auth/google/failure",
   }),
   googleCallback

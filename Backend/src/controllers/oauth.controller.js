@@ -41,6 +41,13 @@ export const googleCallback = async (req, res) => {
     // Cookie will be sent automatically on subsequent requests
     res.cookie("auth_token", token, getCookieOptions());
 
+    // Destroy OAuth session immediately after issuing JWT
+    // This keeps the app stateless after OAuth handshake completes
+    req.logout(() => {});
+    if (req.session) {
+      req.session.destroy(() => {});
+    }
+
     // Also pass token in URL for backward compatibility and immediate use
     // Frontend can extract from URL and store, or rely on cookie
     res.redirect(`${FRONTEND_URL}/oauth/callback?token=${token}`);
