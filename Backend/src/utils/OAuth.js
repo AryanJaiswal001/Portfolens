@@ -18,7 +18,7 @@ const configureGoogleStrategy = () => {
   const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
   const GOOGLE_CALLBACK_URL =
     process.env.GOOGLE_CALLBACK_URL ||
-    "http://localhost:5000/api/auth/google/callback";
+    "http://localhost:5000/auth/google/callback";
 
   // Validate credentials exist
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {

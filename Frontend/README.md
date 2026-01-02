@@ -215,7 +215,7 @@ Landing Page → Login/Register → Choice Screen → Survey OR Dashboard
 2. **Google OAuth**
 
    - User clicks "Sign in with Google"
-   - Redirects to `http://localhost:5000/api/auth/google`
+   - Redirects to `http://localhost:5000/auth/google` (note: no /api prefix)
    - Backend handles OAuth → Redirects to `/oauth/callback?token=...`
    - Frontend extracts token → Calls `setAuthFromToken()`
    - Redirects to `/onboarding` (Choice Screen)

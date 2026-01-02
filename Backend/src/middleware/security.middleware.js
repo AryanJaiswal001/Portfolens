@@ -33,7 +33,9 @@ export const globalRateLimiter = rateLimit({
     // Skip rate limiting for health checks
     if (req.path === "/api/health") return true;
     // Skip rate limiting for OAuth routes (involve redirects and retries)
+    // OAuth routes are now at /auth/* (mounted separately from /api/*)
     if (req.path.startsWith("/auth/google")) return true;
+    if (req.path.startsWith("/google")) return true; // For router-relative paths
     return false;
   },
 });

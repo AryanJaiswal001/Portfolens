@@ -55,10 +55,13 @@ export default function SignInPage() {
 
   const handleGoogleSignIn = () => {
     // Redirect to backend Google OAuth endpoint
-    const apiBase =
-      import.meta.env.VITE_API_BASE_URL ||
-      (import.meta.env.DEV ? "http://localhost:5000/api" : "");
-    window.location.href = `${apiBase}/auth/google`;
+    // OAuth routes are at /auth/* (not /api/auth/*)
+    const backendUrl =
+      import.meta.env.VITE_BACKEND_URL ||
+      (import.meta.env.DEV
+        ? "http://localhost:5000"
+        : "https://portfolens.onrender.com");
+    window.location.href = `${backendUrl}/auth/google`;
   };
 
   return (

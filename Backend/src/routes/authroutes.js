@@ -8,11 +8,7 @@ import {
   changePassword,
   completeOnboarding,
 } from "../controllers/auth.controller.js";
-import {
-  googleCallback,
-  oauthFailure,
-  exchangeOAuthToken,
-} from "../controllers/oauth.controller.js";
+import { exchangeOAuthToken } from "../controllers/oauth.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
 import { authRateLimiter } from "../middleware/security.middleware.js";
 import {
@@ -30,9 +26,12 @@ import {
  * Public routes:
  * - POST /api/auth/register - Email registration
  * - POST /api/auth/login - Email login
- * - GET /api/auth/google - Start Google OAuth
- * - GET /api/auth/google/callback - Google OAuth callback
  * - POST /api/auth/oauth/token - Exchange OAuth token (for frontend OAuth)
+ *
+ * NOTE: Google OAuth routes are now at /auth/* (not /api/auth/*)
+ * See oauthRoutes.js for:
+ * - GET /auth/google - Start Google OAuth
+ * - GET /auth/google/callback - Google OAuth callback
  *
  * Protected routes:
  * - GET /api/auth/me - Get current user
@@ -51,43 +50,10 @@ router.post("/register", authRateLimiter, validate(registerSchema), register);
 router.post("/login", authRateLimiter, validate(loginSchema), login);
 
 // ========================
-// GOOGLE OAUTH ROUTES
+// OAUTH TOKEN EXCHANGE
 // ========================
-
-/**
- * @route   GET /api/auth/google
- * @desc    Start Google OAuth flow
- * @access  Public
- * @note    No rate limiting - OAuth involves redirects and retries
- */
-router.get(
-  "/google",
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-    prompt: "select_account", // Always show account picker
-  })
-);
-
-/**
- * @route   GET /api/auth/google/callback
- * @desc    Google OAuth callback handler
- * @access  Public (Google redirects here)
- */
-router.get(
-  "/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: "/api/auth/google/failure",
-  }),
-  googleCallback
-);
-
-/**
- * @route   GET /api/auth/google/failure
- * @desc    Handle OAuth failure
- * @access  Public
- */
-router.get("/google/failure", oauthFailure);
+// NOTE: Google OAuth browser redirects are at /auth/* (see oauthRoutes.js)
+// This route is for frontend-initiated token exchange only
 
 /**
  * @route   POST /api/auth/oauth/token

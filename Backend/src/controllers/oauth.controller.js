@@ -12,7 +12,7 @@ const FRONTEND_URL = process.env.CORS_ORIGIN || "http://localhost:5173";
 
 /**
  * @desc    Handle Google OAuth callback
- * @route   GET /api/auth/google/callback
+ * @route   GET /auth/google/callback
  * @access  Public (Google redirects here)
  */
 export const googleCallback = async (req, res) => {
@@ -38,7 +38,7 @@ export const googleCallback = async (req, res) => {
 
 /**
  * @desc    Handle OAuth failure
- * @route   GET /api/auth/google/failure
+ * @route   GET /auth/google/failure
  * @access  Public
  */
 export const oauthFailure = (req, res) => {

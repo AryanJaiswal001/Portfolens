@@ -7,6 +7,7 @@ import passport from "passport";
 // Import routes
 import healthRoutes from "./routes/health.js";
 import authRoutes from "./routes/authroutes.js";
+import oauthRoutes from "./routes/oauthRoutes.js";
 import portfolioRoutes from "./routes/portfolioRoutes.js";
 import fundReferenceRoutes from "./routes/fundReference.routes.js";
 import analysisRoutes from "./routes/analysis.routes.js";
@@ -117,6 +118,13 @@ app.use(passport.initialize());
 configureGoogleStrategy();
 
 // ===================
+// OAUTH ROUTES (at /auth, NOT /api/auth)
+// ===================
+// Google OAuth routes are mounted at /auth/* for cleaner URLs
+// and to match Google Cloud Console callback URL exactly
+app.use("/auth", oauthRoutes);
+
+// ===================
 // API ROUTES
 // ===================
 
@@ -124,8 +132,8 @@ configureGoogleStrategy();
 app.use("/api/health", healthRoutes);
 
 // Authentication (rate limiting applied per-route in authroutes.js)
-// - OAuth routes: NO rate limiting
 // - Login/register: authRateLimiter
+// - OAuth routes moved to /auth/*
 app.use("/api/auth", authRoutes);
 
 // Portfolio management (protected, strict rate limiting applied in portfolioRoutes.js)

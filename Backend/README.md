@@ -83,13 +83,13 @@ All API inputs are validated using Zod schemas:
 
 ### Optional
 
-| Variable              | Default                   | Description                          |
-| --------------------- | ------------------------- | ------------------------------------ |
-| `PORT`                | 5000                      | Server port                          |
-| `NODE_ENV`            | development               | Environment (development/production) |
-| `CORS_ORIGIN`         | http://localhost:5173     | Allowed CORS origin                  |
-| `JWT_EXPIRES_IN`      | 1d                        | JWT token expiry                     |
-| `GOOGLE_CALLBACK_URL` | /api/auth/google/callback | OAuth callback path                  |
+| Variable              | Default               | Description                          |
+| --------------------- | --------------------- | ------------------------------------ |
+| `PORT`                | 5000                  | Server port                          |
+| `NODE_ENV`            | development           | Environment (development/production) |
+| `CORS_ORIGIN`         | http://localhost:5173 | Allowed CORS origin                  |
+| `JWT_EXPIRES_IN`      | 1d                    | JWT token expiry                     |
+| `GOOGLE_CALLBACK_URL` | /auth/google/callback | OAuth callback path                  |
 
 ## 🏗️ Project Structure
 
@@ -118,9 +118,9 @@ src/
 
 - `POST /api/auth/register` - Create account
 - `POST /api/auth/login` - Login
-- `GET /api/auth/google` - Google OAuth initiate
-- `GET /api/auth/google/callback` - Google OAuth callback
-- `POST /api/auth/google/token` - Exchange Google token
+- `GET /auth/google` - Google OAuth initiate (note: no /api prefix)
+- `GET /auth/google/callback` - Google OAuth callback (note: no /api prefix)
+- `POST /api/auth/oauth/token` - Exchange OAuth token
 
 ### Portfolios
 
