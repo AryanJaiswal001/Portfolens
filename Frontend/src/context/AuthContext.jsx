@@ -39,6 +39,12 @@ export function AuthProvider({ children }) {
           },
         });
 
+        // Defensive JSON parsing
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Server returned non-JSON response");
+        }
+
         if (response.ok) {
           const data = await response.json();
           setUser(data.data.user);
@@ -74,6 +80,12 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ name, email, password }),
     });
 
+    // Defensive JSON parsing
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Server returned non-JSON response");
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
@@ -99,6 +111,12 @@ export function AuthProvider({ children }) {
       },
       body: JSON.stringify({ email, password }),
     });
+
+    // Defensive JSON parsing
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Server returned non-JSON response");
+    }
 
     const data = await response.json();
 
@@ -128,6 +146,12 @@ export function AuthProvider({ children }) {
         profile: googleProfile,
       }),
     });
+
+    // Defensive JSON parsing
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Server returned non-JSON response");
+    }
 
     const data = await response.json();
 
@@ -160,6 +184,12 @@ export function AuthProvider({ children }) {
           Authorization: `Bearer ${newToken}`,
         },
       });
+
+      // Defensive JSON parsing
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server returned non-JSON response");
+      }
 
       if (response.ok) {
         const data = await response.json();

@@ -20,13 +20,10 @@ export const register = async (req, res) => {
     }
 
     if (password.length < 8) {
-      return (
-        res.status(400),
-        json({
-          success: false,
-          message: "Password must be at least 8 characters",
-        })
-      );
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters",
+      });
     }
 
     //Check for existing user
