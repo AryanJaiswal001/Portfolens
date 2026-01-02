@@ -35,14 +35,14 @@ export const getAllFunds = async (req, res) => {
       .limit(parseInt(limit))
       .select("-__v");
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: funds.length,
       data: { funds },
     });
   } catch (error) {
     console.error("Get funds error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error fetching funds",
     });
@@ -68,7 +68,7 @@ export const searchFundsHandler = async (req, res) => {
 
     const funds = await searchFunds(q, parseInt(limit));
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: funds.length,
       data: {
@@ -83,7 +83,7 @@ export const searchFundsHandler = async (req, res) => {
     });
   } catch (error) {
     console.error("Search funds error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error searching funds",
     });
@@ -109,13 +109,13 @@ export const validateFundHandler = async (req, res) => {
 
     const result = await validateFund(fundName);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: result,
     });
   } catch (error) {
     console.error("Validate fund error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error validating fund",
     });
@@ -141,13 +141,13 @@ export const validatePortfolioFunds = async (req, res) => {
 
     const result = await validateFunds(funds);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: result,
     });
   } catch (error) {
     console.error("Validate portfolio error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error validating portfolio funds",
     });
@@ -168,14 +168,14 @@ export const getSuggestionsHandler = async (req, res) => {
       parseInt(limit)
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: suggestions.length,
       data: { suggestions },
     });
   } catch (error) {
     console.error("Get suggestions error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error getting suggestions",
     });
@@ -191,14 +191,14 @@ export const getCategories = async (req, res) => {
   try {
     const categories = await FundReference.getAllCategories();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: categories.length,
       data: { categories: categories.sort() },
     });
   } catch (error) {
     console.error("Get categories error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error fetching categories",
     });
@@ -216,14 +216,14 @@ export const getAssetTypes = async (req, res) => {
       isActive: true,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: assetTypes.length,
       data: { assetTypes },
     });
   } catch (error) {
     console.error("Get asset types error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error fetching asset types",
     });
@@ -239,14 +239,14 @@ export const getAMCs = async (req, res) => {
   try {
     const amcs = await FundReference.getAllAMCs();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: amcs.length,
       data: { amcs: amcs.sort() },
     });
   } catch (error) {
     console.error("Get AMCs error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error fetching AMCs",
     });
@@ -280,13 +280,13 @@ export const getFundByIdentifier = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: { fund },
     });
   } catch (error) {
     console.error("Get fund error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error fetching fund",
     });
@@ -312,13 +312,13 @@ export const analyzeFundsHandler = async (req, res) => {
 
     const result = await getFundsMetadata(fundNames);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: result,
     });
   } catch (error) {
     console.error("Analyze funds error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error analyzing funds",
     });

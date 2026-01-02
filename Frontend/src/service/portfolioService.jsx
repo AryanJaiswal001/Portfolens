@@ -23,10 +23,34 @@ const getAuthHeaders = () => {
 };
 
 /**
- * Handle API response
+ * Handle API response with safe JSON parsing
+ * - Checks content-type before parsing
+ * - Logs non-JSON responses for debugging
+ * - Shows user-friendly error messages
  */
 const handleResponse = async (response) => {
-  const data = await response.json();
+  // Check content type before parsing
+  const contentType = response.headers.get("content-type");
+  
+  if (!contentType || !contentType.includes("application/json")) {
+    // Log non-JSON response for debugging
+    const text = await response.text().catch(() => "[Could not read response]");
+    console.error("Non-JSON response received:", {
+      status: response.status,
+      contentType,
+      body: text.substring(0, 200), // First 200 chars for debugging
+    });
+    throw new Error("Server returned an invalid response. Please try again.");
+  }
+
+  // Safely parse JSON
+  let data;
+  try {
+    data = await response.json();
+  } catch (parseError) {
+    console.error("JSON parse error:", parseError);
+    throw new Error("Failed to parse server response. Please try again.");
+  }
 
   if (!response.ok) {
     throw new Error(data.message || "Something went wrong");

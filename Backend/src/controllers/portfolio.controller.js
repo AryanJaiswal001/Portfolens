@@ -175,7 +175,7 @@ export const createPortfolio = async (req, res) => {
       funds: transformedFunds,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Portfolio created successfully",
       data: {
@@ -194,7 +194,7 @@ export const createPortfolio = async (req, res) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error creating portfolio",
     });
@@ -219,7 +219,7 @@ export const getPortfolios = async (req, res) => {
       transformForFrontend(p)
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: portfolios.length,
       data: {
@@ -228,7 +228,7 @@ export const getPortfolios = async (req, res) => {
     });
   } catch (error) {
     console.error("Get portfolios error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error fetching portfolios",
     });
@@ -260,7 +260,7 @@ export const getPortfolioById = async (req, res) => {
     // Transform to frontend-compatible format for editing
     const transformedPortfolio = transformForFrontend(portfolio);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: {
         portfolio: transformedPortfolio,
@@ -277,7 +277,7 @@ export const getPortfolioById = async (req, res) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error fetching portfolio",
     });
@@ -362,7 +362,7 @@ export const updatePortfolio = async (req, res) => {
 
     await portfolio.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Portfolio updated successfully",
       data: {
@@ -380,7 +380,7 @@ export const updatePortfolio = async (req, res) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error updating portfolio",
     });
@@ -409,13 +409,14 @@ export const deletePortfolio = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Portfolio deleted successfully",
+      data: null,
     });
   } catch (error) {
     console.error("Delete portfolio error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error deleting portfolio",
     });
