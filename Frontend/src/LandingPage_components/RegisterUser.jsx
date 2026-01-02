@@ -69,7 +69,9 @@ export default function SignUpPage() {
   };
 
   const handleGoogleSignUp = () => {
-    window.location.href = "http://localhost:5000/api/auth/google";
+    // Redirect to backend Google OAuth endpoint
+    const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5000/api" : "");
+    window.location.href = `${apiBase}/auth/google`;
   };
 
   return (

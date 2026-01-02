@@ -26,7 +26,21 @@ const app = express();
 
 // Environment
 const NODE_ENV = process.env.NODE_ENV || "development";
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
+
+// ===================
+// ALLOWED ORIGINS (explicit whitelist)
+// ===================
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173", // Vite dev server
+  "http://localhost:3000", // Alternative local dev
+  "https://portfolens.vercel.app", // Production frontend on Vercel
+];
+
+// ===================
+// TRUST PROXY (required for Render/Vercel behind reverse proxy)
+// ===================
+// Must be set before rate limiting and other middleware that use req.ip
+app.set("trust proxy", 1);
 
 // ===================
 // SECURITY MIDDLEWARE
@@ -35,27 +49,33 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
 // Security headers (helmet defaults are production-ready)
 app.use(helmet());
 
-// CORS - Locked down to frontend domain only
+// CORS - Strict whitelist of allowed origins
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, etc.) in dev
-      if (!origin && NODE_ENV === "development") {
+      // Allow requests with no origin (mobile apps, Postman, curl) ONLY in development
+      if (!origin) {
+        if (NODE_ENV === "development") {
+          return callback(null, true);
+        }
+        // In production, reject requests without origin header
+        return callback(new Error("CORS: Origin header required"));
+      }
+
+      // Check against explicit whitelist
+      if (ALLOWED_ORIGINS.includes(origin)) {
         return callback(null, true);
       }
 
-      // Check against allowed origins
-      const allowedOrigins = CORS_ORIGIN.split(",").map((o) => o.trim());
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      // Reject other origins
-      callback(new Error("Not allowed by CORS"));
+      // Reject all other origins
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["X-Total-Count"], // For pagination if needed
+    maxAge: 86400, // Cache preflight for 24 hours
   })
 );
 

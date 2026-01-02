@@ -132,6 +132,19 @@ export async function generateAnalysis(portfolioId, userId) {
  * @returns {Object} Complete analysis response
  */
 export async function generateSampleAnalysis(samplePortfolioData) {
+  // Validate input
+  if (!samplePortfolioData) {
+    throw new Error("Sample portfolio data is required");
+  }
+
+  if (!samplePortfolioData.funds || !Array.isArray(samplePortfolioData.funds)) {
+    throw new Error("Sample portfolio must have a funds array");
+  }
+
+  if (samplePortfolioData.funds.length === 0) {
+    throw new Error("Sample portfolio must have at least one fund");
+  }
+
   // Convert sample data to portfolio structure
   const portfolio = {
     _id: "sample-portfolio",

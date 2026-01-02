@@ -135,9 +135,24 @@ const lumpsumSchema = z.object({
  */
 const fundSchema = z
   .object({
-    assetType: z.enum(["Equity", "Debt", "Hybrid", "Gold", "Other"], {
-      errorMap: () => ({ message: "Invalid asset type" }),
-    }),
+    assetType: z.enum(
+      [
+        "Mutual Fund",
+        "Stock",
+        "ETF",
+        "Bond",
+        "FD",
+        "Gold",
+        "Real Estate",
+        "Equity",
+        "Debt",
+        "Hybrid",
+        "Other",
+      ],
+      {
+        errorMap: () => ({ message: "Invalid asset type" }),
+      }
+    ),
     assetName: z
       .string()
       .min(3, "Fund name too short")
@@ -235,15 +250,20 @@ export const validate = (schema, source = "body") => {
       const result = schema.safeParse(dataToValidate);
 
       if (!result.success) {
-        const errors = result.error.errors.map((err) => ({
-          field: err.path.join("."),
-          message: err.message,
+        // Defensive check for edge cases where errors might be undefined
+        const zodErrors = result.error?.errors || [];
+        const errors = zodErrors.map((err) => ({
+          field: err.path?.join(".") || "unknown",
+          message: err.message || "Validation error",
         }));
 
         return res.status(400).json({
           success: false,
           message: "Validation failed",
-          errors,
+          errors:
+            errors.length > 0
+              ? errors
+              : [{ field: "unknown", message: "Invalid request data" }],
         });
       }
 
