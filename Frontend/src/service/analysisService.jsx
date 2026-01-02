@@ -31,7 +31,7 @@ const getAuthHeaders = () => {
 const handleResponse = async (response) => {
   // Check content type before parsing
   const contentType = response.headers.get("content-type");
-  
+
   if (!contentType || !contentType.includes("application/json")) {
     // Log non-JSON response for debugging
     const text = await response.text().catch(() => "[Could not read response]");
