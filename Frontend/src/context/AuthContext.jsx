@@ -23,6 +23,8 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Check if user is authenticated on mount
+  // NOTE: This is optional - just fetches user data if token exists
+  // It does NOT clear token on failure to prevent redirect loops
   useEffect(() => {
     const verifyToken = async () => {
       const storedToken = localStorage.getItem("token");
@@ -31,6 +33,9 @@ export function AuthProvider({ children }) {
         setIsLoading(false);
         return;
       }
+
+      // Token exists - set it in state immediately
+      setToken(storedToken);
 
       try {
         const response = await fetch(`${API_URL}/auth/me`, {
@@ -42,24 +47,22 @@ export function AuthProvider({ children }) {
         // Defensive JSON parsing
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-          throw new Error("Server returned non-JSON response");
+          // Non-JSON response - just log and continue, don't clear token
+          console.warn("Auth /me returned non-JSON response");
+          setIsLoading(false);
+          return;
         }
 
         if (response.ok) {
           const data = await response.json();
           setUser(data.data.user);
-          setToken(storedToken);
-        } else {
-          // Token invalid, clear storage
-          localStorage.removeItem("token");
-          setToken(null);
-          setUser(null);
         }
+        // NOTE: We intentionally do NOT clear token on failure
+        // This prevents redirect loops during OAuth callback
       } catch (error) {
         console.error("Auth verification error:", error);
-        localStorage.removeItem("token");
-        setToken(null);
-        setUser(null);
+        // NOTE: We intentionally do NOT clear token on error
+        // This prevents redirect loops during OAuth callback
       } finally {
         setIsLoading(false);
       }
@@ -169,56 +172,16 @@ export function AuthProvider({ children }) {
 
   /**
    * Set auth from OAuth callback (token from URL)
-   * CRITICAL: Does NOT call backend - just stores token and triggers user fetch
-   * The useEffect verifyToken will handle fetching user data
+   * CRITICAL: Does NOT call backend - just stores token
+   * User data will be fetched lazily when needed
    */
   const setAuthFromToken = (newToken) => {
     // Store token in localStorage and state
     localStorage.setItem("token", newToken);
     setToken(newToken);
-
-    // Set loading to trigger re-verification on next render
-    // The useEffect will pick up the token and fetch user data
-    setIsLoading(true);
-
-    // Trigger user fetch asynchronously
-    const fetchUserData = async () => {
-      try {
-        const response = await fetch(`${API_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${newToken}`,
-          },
-        });
-
-        // Defensive JSON parsing
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          throw new Error("Non-JSON response received");
-        }
-
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data.data.user);
-        } else {
-          // Token invalid, clear state
-          localStorage.removeItem("token");
-          setToken(null);
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Error fetching user:", error);
-        localStorage.removeItem("token");
-        setToken(null);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserData();
-
-    // Return immediately - caller doesn't wait for user fetch
-    return Promise.resolve();
+    // Don't set loading - let the page render immediately
+    // User data can be fetched later if needed
+    setIsLoading(false);
   };
 
   /**

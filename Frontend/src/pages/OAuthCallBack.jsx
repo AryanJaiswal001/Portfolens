@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 /**
  * OAuth Callback Handler
@@ -8,58 +7,49 @@ import { useAuth } from "../context/AuthContext";
  * Handles the redirect from Google OAuth.
  * CRITICAL: This page does NOT call the backend.
  * It only:
- * 1. Reads token from URL
- * 2. Stores token via AuthContext
- * 3. Redirects to /onboarding
+ * 1. Reads token from URL query param
+ * 2. Stores token in localStorage
+ * 3. Redirects directly to /onboarding
  */
 export default function OAuthCallback() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { setAuthFromToken } = useAuth();
   const [status, setStatus] = useState("Processing...");
   const [hasProcessed, setHasProcessed] = useState(false);
 
   useEffect(() => {
     // Prevent double processing
     if (hasProcessed) return;
+    setHasProcessed(true);
 
-    const handleCallback = () => {
-      setHasProcessed(true);
-      const token = searchParams.get("token");
-      const error = searchParams.get("error");
+    // Read token from URL query param
+    const token = new URLSearchParams(window.location.search).get("token");
+    const error = new URLSearchParams(window.location.search).get("error");
 
-      if (error) {
-        setStatus("Authentication failed. Redirecting...");
-        setTimeout(() => {
-          navigate("/signin?error=" + encodeURIComponent(error), {
-            replace: true,
-          });
-        }, 1500);
-        return;
-      }
-
-      if (!token) {
-        setStatus("No token received. Redirecting...");
-        setTimeout(() => {
-          navigate("/signin?error=no_token", { replace: true });
-        }, 1500);
-        return;
-      }
-
-      // Store token - this does NOT call backend, just stores and triggers async fetch
-      setStatus("Setting up your session...");
-      setAuthFromToken(token);
-
-      // Navigate to onboarding immediately
-      // The ProtectedRoute will show loading while user data is being fetched
-      setStatus("Login successful! Redirecting...");
+    if (error) {
+      setStatus("Authentication failed. Redirecting...");
       setTimeout(() => {
-        navigate("/onboarding", { replace: true });
-      }, 500);
-    };
+        navigate("/signin?error=" + encodeURIComponent(error), { replace: true });
+      }, 1500);
+      return;
+    }
 
-    handleCallback();
-  }, [searchParams, navigate, setAuthFromToken, hasProcessed]);
+    if (!token) {
+      setStatus("No token received. Redirecting...");
+      setTimeout(() => {
+        navigate("/signin?error=no_token", { replace: true });
+      }, 1500);
+      return;
+    }
+
+    // Store token in localStorage - NO backend call
+    localStorage.setItem("token", token);
+    
+    // Redirect directly to /onboarding
+    setStatus("Login successful! Redirecting...");
+    setTimeout(() => {
+      navigate("/onboarding", { replace: true });
+    }, 500);
+  }, [navigate, hasProcessed]);
 
   return (
     <div
