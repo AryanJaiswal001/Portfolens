@@ -55,7 +55,9 @@ export default function SignInPage() {
 
   const handleGoogleSignIn = () => {
     // Redirect to backend Google OAuth endpoint
-    const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5000/api" : "");
+    const apiBase =
+      import.meta.env.VITE_API_BASE_URL ||
+      (import.meta.env.DEV ? "http://localhost:5000/api" : "");
     window.location.href = `${apiBase}/auth/google`;
   };
 

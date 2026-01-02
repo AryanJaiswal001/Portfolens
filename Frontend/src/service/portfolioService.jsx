@@ -7,7 +7,9 @@
  */
 
 // API base URL - uses environment variable, no hardcoded fallback in production
-const API_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5000/api" : "");
+const API_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? "http://localhost:5000/api" : "");
 
 /**
  * Get auth headers with JWT token
