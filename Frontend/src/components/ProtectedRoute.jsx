@@ -9,12 +9,14 @@ import FullPageLoader from "./FullPageLoader";
  * NEVER returns null - always shows loading, redirect, or children.
  * Redirects to signin if not authenticated.
  *
- * NOTE: Choice Screen (/onboarding) is shown after every login via the login flows,
- * not via route guards. This allows users to refresh the dashboard without being
- * sent back to the choice screen.
+ * Flow:
+ * 1. If loading (checking auth or fetching user), show loader
+ * 2. If no token, redirect to signin
+ * 3. If token exists (even if user not yet loaded), show children
+ *    - This allows onboarding to render while user data loads
  */
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { token, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   // Show loading while checking auth - NEVER return null
@@ -22,12 +24,13 @@ export default function ProtectedRoute({ children }) {
     return <FullPageLoader message="Checking authentication..." />;
   }
 
-  // Redirect to signin if not authenticated
-  if (!isAuthenticated) {
-    // Save the attempted URL for redirecting after login
+  // Check for token presence first (for OAuth callback flow)
+  // Token exists but user might still be loading - that's OK for onboarding
+  if (!token) {
+    // No token at all - redirect to signin
     return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 
-  // User is authenticated - allow access to all protected routes
+  // Token exists - allow access (user data may still be loading in background)
   return children;
 }

@@ -6,9 +6,11 @@ import { useAuth } from "../context/AuthContext";
  * OAuth Callback Handler
  *
  * Handles the redirect from Google OAuth.
- * Extracts the token from URL and stores it via AuthContext.
- * CRITICAL: Only navigates AFTER auth state is fully hydrated.
- * Redirects to onboarding if first-time user, otherwise to dashboard.
+ * CRITICAL: This page does NOT call the backend.
+ * It only:
+ * 1. Reads token from URL
+ * 2. Stores token via AuthContext
+ * 3. Redirects to /onboarding
  */
 export default function OAuthCallback() {
   const [searchParams] = useSearchParams();
@@ -21,7 +23,7 @@ export default function OAuthCallback() {
     // Prevent double processing
     if (hasProcessed) return;
 
-    const handleCallback = async () => {
+    const handleCallback = () => {
       setHasProcessed(true);
       const token = searchParams.get("token");
       const error = searchParams.get("error");
@@ -32,7 +34,7 @@ export default function OAuthCallback() {
           navigate("/signin?error=" + encodeURIComponent(error), {
             replace: true,
           });
-        }, 2000);
+        }, 1500);
         return;
       }
 
@@ -40,29 +42,20 @@ export default function OAuthCallback() {
         setStatus("No token received. Redirecting...");
         setTimeout(() => {
           navigate("/signin?error=no_token", { replace: true });
-        }, 2000);
+        }, 1500);
         return;
       }
 
-      try {
-        setStatus("Verifying credentials...");
+      // Store token - this does NOT call backend, just stores and triggers async fetch
+      setStatus("Setting up your session...");
+      setAuthFromToken(token);
 
-        // CRITICAL: Wait for setAuthFromToken to complete and return user
-        const userData = await setAuthFromToken(token);
-
-        setStatus("Login successful! Redirecting...");
-
-        // Always navigate to Choice Screen after login
-        setTimeout(() => {
-          navigate("/onboarding", { replace: true });
-        }, 500);
-      } catch (err) {
-        console.error("OAuth callback error:", err);
-        setStatus("Error processing login. Redirecting...");
-        setTimeout(() => {
-          navigate("/signin?error=token_error", { replace: true });
-        }, 2000);
-      }
+      // Navigate to onboarding immediately
+      // The ProtectedRoute will show loading while user data is being fetched
+      setStatus("Login successful! Redirecting...");
+      setTimeout(() => {
+        navigate("/onboarding", { replace: true });
+      }, 500);
     };
 
     handleCallback();

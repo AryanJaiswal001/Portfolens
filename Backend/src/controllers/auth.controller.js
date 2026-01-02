@@ -16,6 +16,8 @@ export const register = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Provide missing credentails (email,name or password)",
+        token: null,
+        user: null,
       });
     }
 
@@ -23,6 +25,8 @@ export const register = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Password must be at least 8 characters",
+        token: null,
+        user: null,
       });
     }
 
@@ -32,6 +36,8 @@ export const register = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "User with this email already exists",
+        token: null,
+        user: null,
       });
     }
 
@@ -49,14 +55,12 @@ export const register = async (req, res) => {
     //Generate token
     const token = generateToken(user._id);
 
-    //Return user without password
-    res.status(201).json({
+    //Return user without password - standardized response contract
+    return res.status(201).json({
       success: true,
       message: "User registered successfully",
-      data: {
-        user: user.toJSON(),
-        token,
-      },
+      token: token,
+      user: user.toJSON(),
     });
   } catch (error) {
     console.error("Register error", error.message);
@@ -66,11 +70,15 @@ export const register = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Email already registered",
+        token: null,
+        user: null,
       });
     }
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error registering user",
+      token: null,
+      user: null,
     });
   }
 };
@@ -89,6 +97,8 @@ export const login = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Please provide email and password",
+        token: null,
+        user: null,
       });
     }
 
@@ -101,6 +111,8 @@ export const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
+        token: null,
+        user: null,
       });
     }
 
@@ -109,6 +121,8 @@ export const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "This account uses Google login. Please sign in with Google.",
+        token: null,
+        user: null,
       });
     }
 
@@ -118,25 +132,28 @@ export const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
+        token: null,
+        user: null,
       });
     }
 
     // Generate token
     const token = generateToken(user._id);
 
-    res.status(200).json({
+    // Standardized response contract
+    return res.status(200).json({
       success: true,
       message: "Login successful",
-      data: {
-        user: user.toJSON(),
-        token,
-      },
+      token: token,
+      user: user.toJSON(),
     });
   } catch (error) {
     console.error("Login error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error logging in",
+      token: null,
+      user: null,
     });
   }
 };
@@ -148,7 +165,7 @@ export const login = async (req, res) => {
  */
 export const getMe = async (req, res) => {
   try {
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: {
         user: req.user,
@@ -156,7 +173,7 @@ export const getMe = async (req, res) => {
     });
   } catch (error) {
     console.error("Get me error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error fetching user",
     });
@@ -181,7 +198,7 @@ export const updateProfile = async (req, res) => {
       runValidators: true,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Profile updated successfully",
       data: {
@@ -198,7 +215,7 @@ export const updateProfile = async (req, res) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error updating profile",
     });
@@ -244,7 +261,7 @@ export const changePassword = async (req, res) => {
     if (!isValid) {
       return res.status(401).json({
         success: false,
-        message: "Current password is incorrect",
+        message: "Authentication failed",
       });
     }
 
@@ -252,13 +269,13 @@ export const changePassword = async (req, res) => {
     user.password = await hashPassword(newPassword);
     await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Password changed successfully",
     });
   } catch (error) {
     console.error("Change password error", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error changing password",
     });
@@ -278,14 +295,14 @@ export const completeOnboarding = async (req, res) => {
       { new: true }
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Onboarding completed",
       data: { user },
     });
   } catch (error) {
     console.error("Complete onboarding error:", error.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Error completing onboarding",
     });

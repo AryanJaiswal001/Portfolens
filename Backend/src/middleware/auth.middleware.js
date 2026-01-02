@@ -26,7 +26,7 @@ export const protect = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Not authorised,no token provided",
+        message: "Authentication failed",
       });
     }
     //Step 2:Verify token
@@ -37,13 +37,13 @@ export const protect = async (req, res, next) => {
       if (error.name === "JsonWebTokenError") {
         return res.status(401).json({
           success: false,
-          message: "Invalid token",
+          message: "Authentication failed",
         });
       }
       if (error.name === "TokenExpiredError") {
         return res.status(401).json({
           success: false,
-          message: "Token expired,please login again",
+          message: "Authentication failed",
         });
       }
       throw error;
@@ -54,16 +54,16 @@ export const protect = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "User not found,not authorised",
+        message: "Authentication failed",
       });
     }
     req.user = user;
     next();
   } catch (error) {
     console.error("❌ Auth Middleware Error:", error);
-    res.status(500).json({
+    return res.status(401).json({
       success: false,
-      message: "Server error in authentication",
+      message: "Authentication failed",
     });
   }
 };

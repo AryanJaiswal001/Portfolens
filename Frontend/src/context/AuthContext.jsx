@@ -83,7 +83,7 @@ export function AuthProvider({ children }) {
     // Defensive JSON parsing
     const contentType = response.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
-      throw new Error("Server returned non-JSON response");
+      throw new Error("Non-JSON response received");
     }
 
     const data = await response.json();
@@ -92,10 +92,10 @@ export function AuthProvider({ children }) {
       throw new Error(data.message || "Registration failed");
     }
 
-    // Store token and user
-    localStorage.setItem("token", data.data.token);
-    setToken(data.data.token);
-    setUser(data.data.user);
+    // Store token and user - using top-level fields per new contract
+    localStorage.setItem("token", data.token);
+    setToken(data.token);
+    setUser(data.user);
 
     return data;
   };
@@ -115,7 +115,7 @@ export function AuthProvider({ children }) {
     // Defensive JSON parsing
     const contentType = response.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
-      throw new Error("Server returned non-JSON response");
+      throw new Error("Non-JSON response received");
     }
 
     const data = await response.json();
@@ -124,10 +124,10 @@ export function AuthProvider({ children }) {
       throw new Error(data.message || "Login failed");
     }
 
-    // Store token and user
-    localStorage.setItem("token", data.data.token);
-    setToken(data.data.token);
-    setUser(data.data.user);
+    // Store token and user - using top-level fields per new contract
+    localStorage.setItem("token", data.token);
+    setToken(data.token);
+    setUser(data.user);
 
     return data;
   };
@@ -150,7 +150,7 @@ export function AuthProvider({ children }) {
     // Defensive JSON parsing
     const contentType = response.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
-      throw new Error("Server returned non-JSON response");
+      throw new Error("Non-JSON response received");
     }
 
     const data = await response.json();
@@ -159,6 +159,7 @@ export function AuthProvider({ children }) {
       throw new Error(data.message || "Google login failed");
     }
 
+    // OAuth token exchange still uses data.data format
     localStorage.setItem("token", data.data.token);
     setToken(data.data.token);
     setUser(data.data.user);
@@ -168,50 +169,56 @@ export function AuthProvider({ children }) {
 
   /**
    * Set auth from OAuth callback (token from URL)
-   * Returns a promise that resolves with user data after hydration
+   * CRITICAL: Does NOT call backend - just stores token and triggers user fetch
+   * The useEffect verifyToken will handle fetching user data
    */
-  const setAuthFromToken = async (newToken) => {
-    // Set loading to true during token verification
-    setIsLoading(true);
-
+  const setAuthFromToken = (newToken) => {
+    // Store token in localStorage and state
     localStorage.setItem("token", newToken);
     setToken(newToken);
 
-    // Fetch user data
-    try {
-      const response = await fetch(`${API_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${newToken}`,
-        },
-      });
+    // Set loading to trigger re-verification on next render
+    // The useEffect will pick up the token and fetch user data
+    setIsLoading(true);
 
-      // Defensive JSON parsing
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server returned non-JSON response");
-      }
+    // Trigger user fetch asynchronously
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch(`${API_URL}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${newToken}`,
+          },
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.data.user);
-        setIsLoading(false);
-        return data.data.user; // Return user data for caller
-      } else {
-        // Token invalid, clear state
+        // Defensive JSON parsing
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Non-JSON response received");
+        }
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.data.user);
+        } else {
+          // Token invalid, clear state
+          localStorage.removeItem("token");
+          setToken(null);
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
         localStorage.removeItem("token");
         setToken(null);
         setUser(null);
+      } finally {
         setIsLoading(false);
-        throw new Error("Invalid token");
       }
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      localStorage.removeItem("token");
-      setToken(null);
-      setUser(null);
-      setIsLoading(false);
-      throw error;
-    }
+    };
+
+    fetchUserData();
+
+    // Return immediately - caller doesn't wait for user fetch
+    return Promise.resolve();
   };
 
   /**
@@ -233,6 +240,12 @@ export function AuthProvider({ children }) {
         Authorization: `Bearer ${token}`,
       },
     });
+
+    // Defensive JSON parsing
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Non-JSON response received");
+    }
 
     const data = await response.json();
 
@@ -256,6 +269,12 @@ export function AuthProvider({ children }) {
       },
       body: JSON.stringify(updates),
     });
+
+    // Defensive JSON parsing
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Non-JSON response received");
+    }
 
     const data = await response.json();
 
